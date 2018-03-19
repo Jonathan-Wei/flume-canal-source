@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.weiboyi.etl.flume.source.canal;
+package com.citic.tagent.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
-import com.alibaba.otter.canal.protocol.Message;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -33,13 +32,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 public class CanalEntryChannelEventConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryChannelEventConverter.class);
     private static Gson gson = new Gson();
     private static Long numberInTransaction = 0l;
 
-    public static List<Event> convert(CanalEntry.Entry entry, Boolean oldDataRequired) {
+    public static List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
 
         List<Event> events = new ArrayList<Event>();
 
@@ -81,7 +81,7 @@ public class CanalEntryChannelEventConverter {
                     Map<String, Object> eventMap = new HashMap<String, Object>();
 
                     Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList());
-                    if (oldDataRequired) {
+                    if (canalConf.getOldDataRequired()) {
                         Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList());
                         eventMap.put("old", beforeRowMap);
                     }
@@ -92,16 +92,23 @@ public class CanalEntryChannelEventConverter {
                         }
                     }
 
-                    eventMap.put("table", entry.getHeader().getTableName());
+                    String table = entry.getHeader().getTableName();
+                    String database = entry.getHeader().getSchemaName();
+
+                    eventMap.put("table", table);
                     eventMap.put("ts", Math.round(entry.getHeader().getExecuteTime() / 1000));
-                    eventMap.put("database", entry.getHeader().getSchemaName());
+                    eventMap.put("database", database);
                     eventMap.put("data", rowMap);
                     eventMap.put("type", eventType.toString());
 
 
                     Map<String, String> header = new HashMap<String, String>();
-                    header.put("table", entry.getHeader().getTableName());
+                    String keyName = database + '.' + table;
 
+                    String topic = canalConf.getTableToTopicMap().getOrDefault(keyName,
+                            CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
+
+                    header.put("topic", topic);
                     header.put("numInTransaction", String.valueOf(CanalEntryChannelEventConverter.numberInTransaction));
 
                     events.add(EventBuilder.withBody(gson.toJson(eventMap, new TypeToken<Map<String, Object>>(){}.getType()).getBytes(Charset.forName("UTF-8")), header));

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.weiboyi.etl.flume.source.canal;
+package com.citic.tagent.source.canal;
 
 import com.alibaba.otter.canal.client.CanalConnector;
 import com.alibaba.otter.canal.client.CanalConnectors;
@@ -24,7 +24,6 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
 

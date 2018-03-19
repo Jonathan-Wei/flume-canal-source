@@ -14,17 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.weiboyi.etl.flume.source.canal;
+package com.citic.tagent.source.canal;
 
-import org.apache.avro.generic.GenericData;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang.StringUtils;
-import sun.net.util.IPAddressUtil;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CanalConf {
 
@@ -37,6 +38,23 @@ public class CanalConf {
     private String serverUrls;
     private String filter;
     private Boolean oldDataRequired;
+    private Map<String, String> tableToTopicMap;
+
+//    public String getTableToTopicMap() {
+//        return tableToTopicMap;
+//    }
+
+    public void setTableToTopicMap(String tableToTopicMap) {
+        // test.test:test123;test.test1:test234
+        this.tableToTopicMap  = Splitter.on(';')
+                .trimResults()
+                .withKeyValueSeparator(":")
+                .split(tableToTopicMap);
+    }
+
+    public Map<String, String> getTableToTopicMap() {
+        return tableToTopicMap;
+    }
 
     public String getZkServers() {
         return zkServers;

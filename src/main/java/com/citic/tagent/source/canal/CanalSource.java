@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.weiboyi.etl.flume.source.canal;
+package com.citic.tagent.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
 import org.apache.flume.*;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.conf.ConfigurationException;
-import org.apache.flume.event.EventBuilder;
 import org.apache.flume.source.AbstractPollableSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class CanalSource extends AbstractPollableSource
         implements Configurable {
@@ -65,11 +61,21 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setServerUrls(context.getString(CanalSourceConstants.SERVER_URLS));
         canalConf.setZkServers(context.getString(CanalSourceConstants.ZOOKEEPER_SERVERS));
         canalConf.setDestination(context.getString(CanalSourceConstants.DESTINATION));
-        canalConf.setUsername(context.getString(CanalSourceConstants.USERNAME, CanalSourceConstants.DEFAULT_USERNAME));
-        canalConf.setPassword(context.getString(CanalSourceConstants.PASSWORD, CanalSourceConstants.DEFAULT_PASSWORD));
+        canalConf.setUsername(context.getString(CanalSourceConstants.USERNAME,
+                CanalSourceConstants.DEFAULT_USERNAME));
+        canalConf.setPassword(context.getString(CanalSourceConstants.PASSWORD,
+                CanalSourceConstants.DEFAULT_PASSWORD));
         canalConf.setFilter(context.getString(CanalSourceConstants.FILTER));
-        canalConf.setBatchSize(context.getInteger(CanalSourceConstants.BATCH_SIZE, CanalSourceConstants.DEFAULT_BATCH_SIZE));
-        canalConf.setOldDataRequired(context.getBoolean(CanalSourceConstants.OLD_DATA_REQUIRED, CanalSourceConstants.DEFAULT_OLD_DATA_REQUIRED));
+        canalConf.setBatchSize(context.getInteger(CanalSourceConstants.BATCH_SIZE,
+                CanalSourceConstants.DEFAULT_BATCH_SIZE));
+        canalConf.setOldDataRequired(context.getBoolean(CanalSourceConstants.OLD_DATA_REQUIRED,
+                CanalSourceConstants.DEFAULT_OLD_DATA_REQUIRED));
+
+        // add
+        canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
+
+        LOGGER.debug("table_to_topic_map: {}",  canalConf.getTableToTopicMap().toString());
+
 
         if (!canalConf.isConnectionUrlValid()) {
             throw new ConfigurationException(String.format("\"%s\",\"%s\" AND \"%s\" at least one must be specified!",
@@ -88,7 +94,11 @@ public class CanalSource extends AbstractPollableSource
             if (message != null) {
                 try {
                     for (CanalEntry.Entry entry : message.getEntries()) {
-                        getChannelProcessor().processEventBatch(CanalEntryChannelEventConverter.convert(entry, canalConf.getOldDataRequired()));
+                        getChannelProcessor().processEventBatch(
+                                CanalEntryChannelEventConverter.convert(
+                                        entry, canalConf
+                                )
+                        );
                     }
                 } catch (Exception e) {
                     this.canalClient.rollback(message.getId());
