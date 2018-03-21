@@ -14,16 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.citic.tagent.source.canal;
+package org.apache.flume.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
+import com.google.common.collect.Lists;
 import org.apache.flume.*;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.conf.ConfigurationException;
+import org.apache.flume.instrumentation.SourceCounter;
 import org.apache.flume.source.AbstractPollableSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class CanalSource extends AbstractPollableSource
         implements Configurable {
@@ -33,9 +38,13 @@ public class CanalSource extends AbstractPollableSource
     private CanalClient canalClient = null;
     private CanalConf canalConf = new CanalConf();
 
+    private SourceCounter sourceCounter;
+
     @Override
     protected void doStart() throws FlumeException {
         LOGGER.trace("start...");
+
+        LOGGER.info("Object name: {}", this.getClass().getName().toString());
 
         try {
             this.canalClient = new CanalClient(canalConf);
@@ -45,12 +54,18 @@ public class CanalSource extends AbstractPollableSource
 
             throw new FlumeException(exception);
         }
+
+        sourceCounter.start();
     }
 
     @Override
     protected void doStop() throws FlumeException {
         LOGGER.trace("stop...");
         this.canalClient.stop();
+
+        sourceCounter.stop();
+        LOGGER.info("" +
+                "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
     }
 
     @Override
@@ -71,11 +86,11 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setOldDataRequired(context.getBoolean(CanalSourceConstants.OLD_DATA_REQUIRED,
                 CanalSourceConstants.DEFAULT_OLD_DATA_REQUIRED));
 
-        // add
         canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
 
-        LOGGER.debug("table_to_topic_map: {}",  canalConf.getTableToTopicMap().toString());
+        canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
 
+        LOGGER.debug("table_fields_table: {}",  canalConf.getTableFieldsFilter().toString());
 
         if (!canalConf.isConnectionUrlValid()) {
             throw new ConfigurationException(String.format("\"%s\",\"%s\" AND \"%s\" at least one must be specified!",
@@ -83,38 +98,53 @@ public class CanalSource extends AbstractPollableSource
                     CanalSourceConstants.SERVER_URL,
                     CanalSourceConstants.SERVER_URLS));
         }
+
+        if (sourceCounter == null) {
+            sourceCounter = new SourceCounter(getName());
+        }
     }
 
 
     @Override
-    protected Status doProcess() throws EventDeliveryException {
+    protected Status doProcess() {
+        Message message;
         try {
-            Message message = canalClient.fetchRows(canalConf.getBatchSize());
-
-            if (message != null) {
-                try {
-                    for (CanalEntry.Entry entry : message.getEntries()) {
-                        getChannelProcessor().processEventBatch(
-                                CanalEntryChannelEventConverter.convert(
-                                        entry, canalConf
-                                )
-                        );
-                    }
-                } catch (Exception e) {
-                    this.canalClient.rollback(message.getId());
-                    LOGGER.warn(String.format("Exceptions occurs when channel processing batch events, message is %s", e.getMessage()));
-                    return Status.BACKOFF;
-                }
-
-                this.canalClient.ack(message.getId());
-                LOGGER.trace(String.format("Canal ack ok, batch id is %d", message.getId()));
-                return Status.READY;
-            } else {
-                return Status.BACKOFF;
-            }
+            message = canalClient.fetchRows(canalConf.getBatchSize());
         } catch (Exception e) {
-            LOGGER.warn(String.format("Exceptions occurs when canal client fetching messages, message is %s", e.getMessage()));
+            LOGGER.error("Exceptions occurs when canal client fetching messages, message is {}",
+                    e.getMessage(), e);
             return Status.BACKOFF;
         }
+
+        if (message == null) {
+            return Status.BACKOFF;
+        }
+
+        List<Event> eventsAll = Lists.newArrayList();
+
+        for (CanalEntry.Entry entry : message.getEntries()) {
+            List<Event> events = CanalEntryChannelEventConverter.convert(entry, canalConf);
+            eventsAll.addAll(events);
+        }
+
+        sourceCounter.addToEventReceivedCount(eventsAll.size());
+        sourceCounter.incrementAppendBatchReceivedCount();
+
+        try {
+            getChannelProcessor().processEventBatch(eventsAll);
+        } catch (Exception e) {
+            this.canalClient.rollback(message.getId());
+            LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
+                    e.getMessage(), e);
+            return Status.BACKOFF;
+        }
+
+        this.canalClient.ack(message.getId());
+        sourceCounter.addToEventAcceptedCount(eventsAll.size());
+        sourceCounter.incrementAppendBatchAcceptedCount();
+
+        LOGGER.debug("Canal ack ok, batch id is {}", message.getId());
+        return Status.READY;
     }
+
 }

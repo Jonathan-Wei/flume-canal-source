@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.citic.tagent.source.canal;
+package org.apache.flume.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.google.gson.Gson;
@@ -37,16 +37,15 @@ public class CanalEntryChannelEventConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryChannelEventConverter.class);
     private static Gson gson = new Gson();
-    private static Long numberInTransaction = 0l;
+    private static Long numberInTransaction = 0L;
 
     public static List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
-
         List<Event> events = new ArrayList<Event>();
 
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
                 || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
 
-            CanalEntryChannelEventConverter.numberInTransaction = 0l;
+            CanalEntryChannelEventConverter.numberInTransaction = 0L;
 
             if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
                 CanalEntry.TransactionEnd end = null;
@@ -57,7 +56,6 @@ public class CanalEntryChannelEventConverter {
                     throw new RuntimeException("parse event has an error , data:" + entry.toString(), e);
                 }
             }
-
         }
 
         if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
@@ -73,45 +71,20 @@ public class CanalEntryChannelEventConverter {
             CanalEntry.EventType eventType = rowChange.getEventType();
 
             if (eventType == CanalEntry.EventType.QUERY || rowChange.getIsDdl()) {
-
+                // TODO get sql
             } else {
 
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
+                    // 处理行数据
+                    Map<String, Object> eventMap = handleRowData(rowData, canalConf, entry.getHeader(),
+                            eventType.toString());
+                    byte[] eventBody = gson.toJson(eventMap, new TypeToken<Map<String, Object>>(){}.getType())
+                            .getBytes(Charset.forName("UTF-8"));
 
-                    Map<String, Object> eventMap = new HashMap<String, Object>();
+                    // 处理 event Header
+                    Map<String, String> header = handleHeader(canalConf, entry.getHeader());
 
-                    Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList());
-                    if (canalConf.getOldDataRequired()) {
-                        Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList());
-                        eventMap.put("old", beforeRowMap);
-                    }
-
-                    for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
-                        if (column.getIsKey()) {
-                            eventMap.put("pk", column.getValue());
-                        }
-                    }
-
-                    String table = entry.getHeader().getTableName();
-                    String database = entry.getHeader().getSchemaName();
-
-                    eventMap.put("table", table);
-                    eventMap.put("ts", Math.round(entry.getHeader().getExecuteTime() / 1000));
-                    eventMap.put("database", database);
-                    eventMap.put("data", rowMap);
-                    eventMap.put("type", eventType.toString());
-
-
-                    Map<String, String> header = new HashMap<String, String>();
-                    String keyName = database + '.' + table;
-
-                    String topic = canalConf.getTableToTopicMap().getOrDefault(keyName,
-                            CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
-
-                    header.put("topic", topic);
-                    header.put("numInTransaction", String.valueOf(CanalEntryChannelEventConverter.numberInTransaction));
-
-                    events.add(EventBuilder.withBody(gson.toJson(eventMap, new TypeToken<Map<String, Object>>(){}.getType()).getBytes(Charset.forName("UTF-8")), header));
+                    events.add(EventBuilder.withBody(eventBody,header));
                     CanalEntryChannelEventConverter.numberInTransaction++;
                 }
             }
@@ -120,13 +93,68 @@ public class CanalEntryChannelEventConverter {
         return events;
     }
 
+    /*
+    * 处理行数据，并添加其他字段信息
+    * */
+    private static Map<String, Object> handleRowData(CanalEntry.RowData rowData, CanalConf canalConf,
+                                       CanalEntry.Header entryHeader, String eventType) {
+        Map<String, Object> eventMap = new HashMap<String, Object>();
 
-    private static Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns) {
+        Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList(),
+                                                            canalConf, entryHeader);
+        if (canalConf.getOldDataRequired()) {
+            Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList(),
+                                                                      canalConf, entryHeader);
+            eventMap.put("old", beforeRowMap);
+        }
+
+        for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
+            if (column.getIsKey()) {
+                eventMap.put("pk", column.getValue());
+            }
+        }
+        eventMap.put("table", entryHeader.getTableName());
+        eventMap.put("ts", Math.round(entryHeader.getExecuteTime() / 1000));
+        eventMap.put("db", entryHeader.getSchemaName());
+        eventMap.put("data", rowMap);
+        eventMap.put("type", eventType);
+        return  eventMap;
+    }
+
+    /*
+    * 处理 Event Header 获取数据的 topic
+    * */
+    private static Map<String, String> handleHeader(CanalConf canalConf, CanalEntry.Header entryHeader) {
+        String table = entryHeader.getTableName();
+        String database = entryHeader.getSchemaName();
+
+        Map<String, String> header = new HashMap<String, String>();
+        String keyName = database + '.' + table;
+
+        String topic = canalConf.getTableTopic(keyName);
+
+        header.put("topic", topic);
+        header.put("numInTransaction", String.valueOf(CanalEntryChannelEventConverter.numberInTransaction));
+        return header;
+    }
+
+    /*
+    * 对列数据进行解析
+    * */
+    private static Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns,
+                                                              CanalConf canalConf,
+                                                              CanalEntry.Header entryHeader) {
         Map<String, Object> rowMap = new HashMap<String, Object>();
 
+        String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
+
         for(CanalEntry.Column column : columns) {
-            String fieldName = column.getName();
             int sqlType = column.getSqlType();
+
+            // 根据配置做字段过滤
+            if (!canalConf.isFiledInTable(keyName, column.getName())) {
+                continue;
+            }
 
             String stringValue = column.getValue();
             Object colValue;
@@ -184,11 +212,6 @@ public class CanalEntryChannelEventConverter {
 
                     case Types.NUMERIC:
                     case Types.DECIMAL: {
-//                SchemaBuilder fieldBuilder = Decimal.builder(metadata.getScale(col));
-//                if (optional) {
-//                    fieldBuilder.optional();
-//                }
-//                builder.field(fieldName, fieldBuilder.build());
                         colValue = stringValue;
                         break;
                     }

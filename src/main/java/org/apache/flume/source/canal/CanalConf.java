@@ -14,20 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.citic.tagent.source.canal;
+package org.apache.flume.source.canal;
 
 import com.google.common.base.Splitter;
-import com.google.common.collect.Maps;
+import com.google.common.base.Strings;
+import com.google.common.collect.*;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CanalConf {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
 
     private String zkServers;
     private String destination;
@@ -40,20 +41,63 @@ public class CanalConf {
     private Boolean oldDataRequired;
     private Map<String, String> tableToTopicMap;
 
-//    public String getTableToTopicMap() {
-//        return tableToTopicMap;
-//    }
+    private Table<String, String, Boolean> tableFieldsFilter;
 
+    /*
+    * 设置表名与字段过滤对应 table
+    * */
+    public void setTableFieldsFilter(String tableFieldsFilter) {
+        // schema.table_name:field_name,field_name;schema.table_name:field_name,field_name
+        this.tableFieldsFilter = HashBasedTable.create();
+        Splitter.on(';')
+            .omitEmptyStrings()
+            .trimResults()
+            .withKeyValueSeparator(":")
+            .split(tableFieldsFilter)
+            .forEach((k, v) -> {
+                Iterable<String> fieldList =
+                        Splitter.on(",").omitEmptyStrings().trimResults().split(v);
+                for (String field : fieldList) {
+                    this.tableFieldsFilter.put(k, field, true);
+                }
+            });
+    }
+
+    /*
+    * 判断表名，字段是否在过滤列表中
+    * */
+    public boolean isFiledInTable(String schemaTableName, String fieldName) {
+        if (this.tableFieldsFilter != null) {
+            return this.tableFieldsFilter.contains(schemaTableName, fieldName);
+        } else {
+            return false;
+        }
+    }
+
+    /*
+    * 设置表名和 topic 对应 map
+    * */
     public void setTableToTopicMap(String tableToTopicMap) {
         // test.test:test123;test.test1:test234
         this.tableToTopicMap  = Splitter.on(';')
+                .omitEmptyStrings()
                 .trimResults()
                 .withKeyValueSeparator(":")
                 .split(tableToTopicMap);
     }
 
-    public Map<String, String> getTableToTopicMap() {
-        return tableToTopicMap;
+    /*
+    * 根据表名获取 topic
+    * */
+    public String getTableTopic(String schemaTableName) {
+        if (this.tableToTopicMap != null)
+            return this.tableToTopicMap.getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
+        else
+            return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
+    }
+
+    public Table<String, String, Boolean> getTableFieldsFilter() {
+        return this.tableFieldsFilter;
     }
 
     public String getZkServers() {
@@ -129,9 +173,9 @@ public class CanalConf {
     }
 
     public boolean isConnectionUrlValid() {
-        if (isNullOrEmpty(this.zkServers)
-                && isNullOrEmpty(this.serverUrl)
-                && isNullOrEmpty(this.serverUrls)) {
+        if (Strings.isNullOrEmpty(this.zkServers)
+                && Strings.isNullOrEmpty(this.serverUrl)
+                && Strings.isNullOrEmpty(this.serverUrls)) {
             return false;
         } else {
             return true;
@@ -158,12 +202,10 @@ public class CanalConf {
     }
 
     public static SocketAddress convertUrlToSocketAddress(String serverUrl) throws ServerUrlsFormatException, NumberFormatException {
-
         String[] hostAndPort = serverUrl.split(":");
 
         if (hostAndPort.length == 2 && StringUtils.isNotEmpty(hostAndPort[1])) {
             try {
-
                 int port  = Integer.parseInt(hostAndPort[1]);
                 InetSocketAddress socketAddress = new InetSocketAddress(hostAndPort[0], port);
                 return socketAddress;
@@ -174,9 +216,5 @@ public class CanalConf {
         } else {
             throw new ServerUrlsFormatException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .", serverUrl));
         }
-    }
-
-    private boolean isNullOrEmpty(String value) {
-        return value == null || "".equals(value.trim());
     }
 }

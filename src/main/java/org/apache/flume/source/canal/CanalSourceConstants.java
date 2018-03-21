@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.citic.tagent.source.canal;
+package org.apache.flume.source.canal;
 
 public class CanalSourceConstants {
 
@@ -27,7 +27,9 @@ public class CanalSourceConstants {
     public static final String BATCH_SIZE = "batchSize";
     public static final String FILTER = "filter";
     public static final String OLD_DATA_REQUIRED = "oldDataRequired";
+
     public static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
+    public static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
 
     public static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
     public static final int DEFAULT_BATCH_SIZE = 1024;

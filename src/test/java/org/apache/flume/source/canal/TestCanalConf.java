@@ -1,4 +1,4 @@
-package com.citic.tagent.source.canal;
+package org.apache.flume.source.canal;
 
 
 import junit.framework.Assert;
