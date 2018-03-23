@@ -43,38 +43,9 @@ public class CanalSource extends AbstractPollableSource
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private SourceCounter tableCounter;
 
-    @Override
-    protected void doStart() throws FlumeException {
-        LOGGER.trace("start...");
-
-        LOGGER.info("Object name: {}", this.getClass().getName().toString());
-
-        try {
-            this.canalClient = new CanalClient(canalConf);
-            this.canalClient.start();
-        } catch (ServerUrlsFormatException exception) {
-            LOGGER.error(exception.getMessage(), exception);
-
-            throw new FlumeException(exception);
-        }
-
-        sourceCounter.start();
-        tableCounter.start();
-
-        CanalEntryChannelEventConverter.setCanalConf(canalConf);
-        CanalEntryChannelEventConverter.setTableCounter(tableCounter);
-    }
-
-    @Override
-    protected void doStop() throws FlumeException {
-        LOGGER.trace("stop...");
-        this.canalClient.stop();
-
-        sourceCounter.stop();
-        LOGGER.info("" + "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
-        tableCounter.stop();
-    }
-
+    /*
+    * 获取配置
+    * */
     private void setCanalConf(Context context) {
         canalConf.setServerUrl(context.getString(CanalSourceConstants.SERVER_URL));
         canalConf.setServerUrls(context.getString(CanalSourceConstants.SERVER_URLS));
@@ -125,6 +96,27 @@ public class CanalSource extends AbstractPollableSource
         }
     }
 
+    @Override
+    protected void doStart() throws FlumeException {
+        LOGGER.debug("start...");
+
+        LOGGER.info("Object name: {}", this.getClass().getName().toString());
+
+        try {
+            this.canalClient = new CanalClient(canalConf);
+            this.canalClient.start();
+        } catch (ServerUrlsFormatException exception) {
+            LOGGER.error(exception.getMessage(), exception);
+
+            throw new FlumeException(exception);
+        }
+
+        sourceCounter.start();
+        tableCounter.start();
+
+        CanalEntryConverter.setCanalConf(canalConf);
+        CanalEntryConverter.setTableCounter(tableCounter);
+    }
 
     @Override
     protected Status doProcess() {
@@ -144,7 +136,7 @@ public class CanalSource extends AbstractPollableSource
         List<Event> eventsAll = Lists.newArrayList();
 
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = CanalEntryChannelEventConverter.convert(entry);
+            List<Event> events = CanalEntryConverter.convert(entry);
             eventsAll.addAll(events);
         }
 
@@ -166,6 +158,16 @@ public class CanalSource extends AbstractPollableSource
 
         LOGGER.debug("Canal ack ok, batch id is {}", message.getId());
         return Status.READY;
+    }
+
+    @Override
+    protected void doStop() throws FlumeException {
+        LOGGER.debug("stop...");
+        this.canalClient.stop();
+
+        sourceCounter.stop();
+        LOGGER.info("" + "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
+        tableCounter.stop();
     }
 
 }

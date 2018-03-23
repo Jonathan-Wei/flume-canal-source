@@ -3,9 +3,6 @@ package com.citic.instrumentation;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import org.apache.flume.instrumentation.MonitoredCounterGroup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
 
 public class SourceCounter extends MonitoredCounterGroup implements

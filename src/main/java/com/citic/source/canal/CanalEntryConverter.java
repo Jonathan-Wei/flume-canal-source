@@ -34,9 +34,9 @@ import java.util.List;
 import java.util.Map;
 
 
-public class CanalEntryChannelEventConverter {
+public class CanalEntryConverter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryChannelEventConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryConverter.class);
     private static Gson gson = new Gson();
     private static Long numberInTransaction = 0L;
 
@@ -57,7 +57,7 @@ public class CanalEntryChannelEventConverter {
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
                 || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
 
-            CanalEntryChannelEventConverter.numberInTransaction = 0L;
+            CanalEntryConverter.numberInTransaction = 0L;
 
             if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
                 CanalEntry.TransactionEnd end = null;
@@ -102,7 +102,7 @@ public class CanalEntryChannelEventConverter {
                     Map<String, String> header = handleHeader(entry.getHeader());
 
                     events.add(EventBuilder.withBody(eventBody,header));
-                    CanalEntryChannelEventConverter.numberInTransaction++;
+                    CanalEntryConverter.numberInTransaction++;
                 }
             }
         }
@@ -153,7 +153,7 @@ public class CanalEntryChannelEventConverter {
 
         Map<String, String> header = new HashMap<String, String>();
         header.put("topic", topic);
-        header.put("numInTransaction", String.valueOf(CanalEntryChannelEventConverter.numberInTransaction));
+        header.put("numInTransaction", String.valueOf(CanalEntryConverter.numberInTransaction));
         return header;
     }
 
