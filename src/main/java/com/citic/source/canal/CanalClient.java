@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.flume.source.canal;
+package com.citic.source.canal;
 
 import com.alibaba.otter.canal.client.CanalConnector;
 import com.alibaba.otter.canal.client.CanalConnectors;

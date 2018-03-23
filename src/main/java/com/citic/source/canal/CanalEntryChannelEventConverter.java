@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flume.source.canal;
+package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.instrumentation.SourceCounter;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -39,7 +40,18 @@ public class CanalEntryChannelEventConverter {
     private static Gson gson = new Gson();
     private static Long numberInTransaction = 0L;
 
-    public static List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
+    private static CanalConf canalConf;
+    private static SourceCounter tableCounter;
+
+    public static void setCanalConf(CanalConf argCanalConf) {
+        canalConf = argCanalConf;
+    }
+
+    public static void setTableCounter(SourceCounter argTableCounter) {
+        tableCounter = argTableCounter;
+    }
+
+    public static List<Event> convert(CanalEntry.Entry entry) {
         List<Event> events = new ArrayList<Event>();
 
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
@@ -60,7 +72,7 @@ public class CanalEntryChannelEventConverter {
 
         if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
 
-            CanalEntry.RowChange rowChange = null;
+            CanalEntry.RowChange rowChange;
             try {
                 rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
             } catch (Exception e) {
@@ -76,13 +88,18 @@ public class CanalEntryChannelEventConverter {
 
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
                     // 处理行数据
-                    Map<String, Object> eventMap = handleRowData(rowData, canalConf, entry.getHeader(),
+                    Map<String, Object> eventMap = handleRowData(rowData, entry.getHeader(),
                             eventType.toString());
+
+                    LOGGER.debug("addToTableReceivedCount table: {}, count: {}", getTableKeyName(entry.getHeader()) , 1);
+                    // 监控表数据
+                    tableCounter.incrementTableReceivedCount(getTableKeyName(entry.getHeader()));
+
                     byte[] eventBody = gson.toJson(eventMap, new TypeToken<Map<String, Object>>(){}.getType())
                             .getBytes(Charset.forName("UTF-8"));
 
                     // 处理 event Header
-                    Map<String, String> header = handleHeader(canalConf, entry.getHeader());
+                    Map<String, String> header = handleHeader(entry.getHeader());
 
                     events.add(EventBuilder.withBody(eventBody,header));
                     CanalEntryChannelEventConverter.numberInTransaction++;
@@ -96,7 +113,7 @@ public class CanalEntryChannelEventConverter {
     /*
     * 处理行数据，并添加其他字段信息
     * */
-    private static Map<String, Object> handleRowData(CanalEntry.RowData rowData, CanalConf canalConf,
+    private static Map<String, Object> handleRowData(CanalEntry.RowData rowData,
                                        CanalEntry.Header entryHeader, String eventType) {
         Map<String, Object> eventMap = new HashMap<String, Object>();
 
@@ -121,18 +138,20 @@ public class CanalEntryChannelEventConverter {
         return  eventMap;
     }
 
+    private static String getTableKeyName(CanalEntry.Header entryHeader) {
+        String table = entryHeader.getTableName();
+        String database = entryHeader.getSchemaName();
+        return database + '.' + table;
+    }
+
     /*
     * 处理 Event Header 获取数据的 topic
     * */
-    private static Map<String, String> handleHeader(CanalConf canalConf, CanalEntry.Header entryHeader) {
-        String table = entryHeader.getTableName();
-        String database = entryHeader.getSchemaName();
-
-        Map<String, String> header = new HashMap<String, String>();
-        String keyName = database + '.' + table;
-
+    private static Map<String, String> handleHeader(CanalEntry.Header entryHeader) {
+        String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
 
+        Map<String, String> header = new HashMap<String, String>();
         header.put("topic", topic);
         header.put("numInTransaction", String.valueOf(CanalEntryChannelEventConverter.numberInTransaction));
         return header;

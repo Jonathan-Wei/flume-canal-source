@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flume.source.canal;
+package com.citic.source.canal;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -86,9 +86,13 @@ public class CanalConf {
                 .split(tableToTopicMap);
     }
 
+    public Map<String, String> getTableToTopicMap() {
+        return tableToTopicMap;
+    }
+
     /*
-    * 根据表名获取 topic
-    * */
+        * 根据表名获取 topic
+        * */
     public String getTableTopic(String schemaTableName) {
         if (this.tableToTopicMap != null)
             return this.tableToTopicMap.getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);

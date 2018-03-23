@@ -14,21 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flume.source.canal;
+package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
+import com.citic.instrumentation.SourceCounter;
 import com.google.common.collect.Lists;
 import org.apache.flume.*;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.conf.ConfigurationException;
-import org.apache.flume.instrumentation.SourceCounter;
 import org.apache.flume.source.AbstractPollableSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import static com.citic.source.canal.CanalSourceConstants.SOURCE_TABLES_COUNTER;
 
 public class CanalSource extends AbstractPollableSource
         implements Configurable {
@@ -38,7 +40,8 @@ public class CanalSource extends AbstractPollableSource
     private CanalClient canalClient = null;
     private CanalConf canalConf = new CanalConf();
 
-    private SourceCounter sourceCounter;
+    private org.apache.flume.instrumentation.SourceCounter sourceCounter;
+    private SourceCounter tableCounter;
 
     @Override
     protected void doStart() throws FlumeException {
@@ -56,6 +59,10 @@ public class CanalSource extends AbstractPollableSource
         }
 
         sourceCounter.start();
+        tableCounter.start();
+
+        CanalEntryChannelEventConverter.setCanalConf(canalConf);
+        CanalEntryChannelEventConverter.setTableCounter(tableCounter);
     }
 
     @Override
@@ -64,14 +71,11 @@ public class CanalSource extends AbstractPollableSource
         this.canalClient.stop();
 
         sourceCounter.stop();
-        LOGGER.info("" +
-                "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
+        LOGGER.info("" + "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
+        tableCounter.stop();
     }
 
-    @Override
-    protected void doConfigure(Context context) throws FlumeException {
-        LOGGER.trace("configure...");
-
+    private void setCanalConf(Context context) {
         canalConf.setServerUrl(context.getString(CanalSourceConstants.SERVER_URL));
         canalConf.setServerUrls(context.getString(CanalSourceConstants.SERVER_URLS));
         canalConf.setZkServers(context.getString(CanalSourceConstants.ZOOKEEPER_SERVERS));
@@ -89,8 +93,20 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
 
         canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
-
         LOGGER.debug("table_fields_table: {}",  canalConf.getTableFieldsFilter().toString());
+    }
+
+    @Override
+    protected void doConfigure(Context context) throws FlumeException {
+        LOGGER.debug("configure...");
+
+        setCanalConf(context);
+
+        // CanalSourceConstants.TABLE_TO_TOPIC_MAP 配置不能为空
+        if (canalConf.getTableToTopicMap() == null || canalConf.getTableToTopicMap().isEmpty()){
+            throw new ConfigurationException(String.format("%s cannot be empty or null",
+                    CanalSourceConstants.TABLE_TO_TOPIC_MAP));
+        }
 
         if (!canalConf.isConnectionUrlValid()) {
             throw new ConfigurationException(String.format("\"%s\",\"%s\" AND \"%s\" at least one must be specified!",
@@ -99,8 +115,13 @@ public class CanalSource extends AbstractPollableSource
                     CanalSourceConstants.SERVER_URLS));
         }
 
-        if (sourceCounter == null) {
-            sourceCounter = new SourceCounter(getName());
+        if (sourceCounter == null)
+            sourceCounter = new org.apache.flume.instrumentation.SourceCounter(getName());
+
+        if (tableCounter == null) {
+            Object[] objectArray = canalConf.getTableToTopicMap().keySet().toArray();
+            String[] stringArray = Arrays.copyOf(objectArray, objectArray.length, String[].class);
+            tableCounter = new SourceCounter(SOURCE_TABLES_COUNTER, stringArray);
         }
     }
 
@@ -123,7 +144,7 @@ public class CanalSource extends AbstractPollableSource
         List<Event> eventsAll = Lists.newArrayList();
 
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = CanalEntryChannelEventConverter.convert(entry, canalConf);
+            List<Event> events = CanalEntryChannelEventConverter.convert(entry);
             eventsAll.addAll(events);
         }
 

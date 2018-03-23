@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flume.source.canal;
+package com.citic.source.canal;
 
 public class CanalSourceConstants {
 
@@ -37,6 +37,7 @@ public class CanalSourceConstants {
     public static final String DEFAULT_PASSWORD = "";
     public static final boolean DEFAULT_OLD_DATA_REQUIRED = true;
 
+    public static final String SOURCE_TABLES_COUNTER = "SourceTables";
 
 
 

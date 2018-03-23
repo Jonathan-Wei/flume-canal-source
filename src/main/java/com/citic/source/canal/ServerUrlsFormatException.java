@@ -1,4 +1,4 @@
-package org.apache.flume.source.canal;
+package com.citic.source.canal;
 
 
 public class ServerUrlsFormatException extends Exception {
