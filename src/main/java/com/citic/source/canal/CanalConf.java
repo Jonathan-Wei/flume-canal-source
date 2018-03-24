@@ -37,7 +37,7 @@ public class CanalConf {
     private int batchSize;
     private String serverUrl;
     private String serverUrls;
-    private String filter;
+    private String tableFilter = "";
     private Boolean oldDataRequired;
     private Map<String, String> tableToTopicMap;
 
@@ -160,12 +160,12 @@ public class CanalConf {
         this.serverUrls = serverUrls;
     }
 
-    public String getFilter() {
-        return filter;
+    public String getTableFilter() {
+        return tableFilter;
     }
 
-    public void setFilter(String filter) {
-        this.filter = filter;
+    public void setTableFilter(String tableFilter) {
+        this.tableFilter = tableFilter;
     }
 
     public Boolean getOldDataRequired() {

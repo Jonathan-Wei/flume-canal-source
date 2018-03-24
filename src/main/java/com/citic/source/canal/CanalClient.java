@@ -37,19 +37,24 @@ public class CanalClient {
     public CanalClient(CanalConf canalConf) throws ServerUrlsFormatException {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
-            this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace(String.format("Cluster connector has been created. Zookeeper servers are %s, destination is %s", canalConf.getZkServers(), canalConf.getDestination()));
+            this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),
+                    canalConf.getUsername(), canalConf.getPassword());
+            LOGGER.trace(String.format("Cluster connector has been created. Zookeeper servers are %s, destination is %s",
+                    canalConf.getZkServers(), canalConf.getDestination()));
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrls())) {
-            this.canalConnector = getConnector(CanalConf.convertUrlsToSocketAddressList(canalConf.getServerUrls()), canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace(String.format("Cluster connector has been created. Server urls are %s, destination is %s", canalConf.getServerUrls(), canalConf.getDestination()));
+            this.canalConnector = getConnector(CanalConf.convertUrlsToSocketAddressList(canalConf.getServerUrls()),
+                    canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
+            LOGGER.trace(String.format("Cluster connector has been created. Server urls are %s, destination is %s",
+                    canalConf.getServerUrls(), canalConf.getDestination()));
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrl())) {
-            this.canalConnector = getConnector(CanalConf.convertUrlToSocketAddress(canalConf.getServerUrl()), canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
+            this.canalConnector = getConnector(CanalConf.convertUrlToSocketAddress(canalConf.getServerUrl()),
+                    canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
         }
     }
 
     public void start() {
         this.canalConnector.connect();
-        this.canalConnector.subscribe();
+        this.canalConnector.subscribe(canalConf.getTableFilter());
     }
 
     public Message fetchRows() {
@@ -57,23 +62,16 @@ public class CanalClient {
     }
 
     public Message fetchRows(int batchSize) {
-
         Message message = this.canalConnector.getWithoutAck(batchSize);
 
         long batchId = message.getId();
-
         int size = message.getEntries().size();
-
         if (batchId == -1 || size == 0) {
-
-//            LOGGER.info("batch - {} 没有获取到数据", batchId);
             return null;
-
         } else {
             LOGGER.info("batch - {} data fetched successful, size is {}", batchId, size);
             return message;
         }
-
     }
 
     public void ack(long batchId) {

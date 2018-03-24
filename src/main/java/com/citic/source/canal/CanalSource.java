@@ -55,7 +55,9 @@ public class CanalSource extends AbstractPollableSource
                 CanalSourceConstants.DEFAULT_USERNAME));
         canalConf.setPassword(context.getString(CanalSourceConstants.PASSWORD,
                 CanalSourceConstants.DEFAULT_PASSWORD));
-        canalConf.setFilter(context.getString(CanalSourceConstants.FILTER));
+
+        canalConf.setTableFilter(context.getString(CanalSourceConstants.TABLE_FILTER));
+
         canalConf.setBatchSize(context.getInteger(CanalSourceConstants.BATCH_SIZE,
                 CanalSourceConstants.DEFAULT_BATCH_SIZE));
         canalConf.setOldDataRequired(context.getBoolean(CanalSourceConstants.OLD_DATA_REQUIRED,
