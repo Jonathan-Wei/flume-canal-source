@@ -18,6 +18,8 @@ package com.citic.source.canal;
 
 public class CanalSourceConstants {
 
+    public static final String IP_INTERFACE = "ipInterface";
+
     public static final String ZOOKEEPER_SERVERS = "zkServers";
     public static final String SERVER_URL = "serverUrl";
     public static final String SERVER_URLS = "serverUrls";

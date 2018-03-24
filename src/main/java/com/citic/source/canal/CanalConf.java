@@ -30,6 +30,7 @@ import java.util.*;
 public class CanalConf {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
 
+    private String ipInterface;
     private String zkServers;
     private String destination;
     private String username;
@@ -43,9 +44,17 @@ public class CanalConf {
 
     private Table<String, String, Boolean> tableFieldsFilter;
 
+    public String getIpInterface() {
+        return ipInterface;
+    }
+
+    public void setIpInterface(String ipInterface) {
+        this.ipInterface = ipInterface;
+    }
+
     /*
-    * 设置表名与字段过滤对应 table
-    * */
+        * 设置表名与字段过滤对应 table
+        * */
     public void setTableFieldsFilter(String tableFieldsFilter) {
         // schema.table_name:field_name,field_name;schema.table_name:field_name,field_name
         this.tableFieldsFilter = HashBasedTable.create();

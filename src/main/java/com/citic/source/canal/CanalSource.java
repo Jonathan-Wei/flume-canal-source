@@ -47,7 +47,10 @@ public class CanalSource extends AbstractPollableSource
     * 获取配置
     * */
     private void setCanalConf(Context context) {
+        canalConf.setIpInterface(context.getString(CanalSourceConstants.IP_INTERFACE));
+
         canalConf.setServerUrl(context.getString(CanalSourceConstants.SERVER_URL));
+
         canalConf.setServerUrls(context.getString(CanalSourceConstants.SERVER_URLS));
         canalConf.setZkServers(context.getString(CanalSourceConstants.ZOOKEEPER_SERVERS));
         canalConf.setDestination(context.getString(CanalSourceConstants.DESTINATION));

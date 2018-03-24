@@ -17,6 +17,7 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -37,7 +38,9 @@ import java.util.Map;
 public class CanalEntryConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryConverter.class);
-    private static Gson gson = new Gson();
+    private static String IPAddress;
+
+    private static final Gson gson = new Gson();
     private static Long numberInTransaction = 0L;
 
     private static CanalConf canalConf;
@@ -45,6 +48,7 @@ public class CanalEntryConverter {
 
     public static void setCanalConf(CanalConf argCanalConf) {
         canalConf = argCanalConf;
+        IPAddress = Utility.getLocalIP(canalConf.getIpInterface());
     }
 
     public static void setTableCounter(SourceCounter argTableCounter) {
@@ -57,7 +61,7 @@ public class CanalEntryConverter {
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
                 || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
 
-            CanalEntryConverter.numberInTransaction = 0L;
+            numberInTransaction = 0L;
 
             if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
                 CanalEntry.TransactionEnd end = null;
@@ -102,7 +106,7 @@ public class CanalEntryConverter {
                     Map<String, String> header = handleHeader(entry.getHeader());
 
                     events.add(EventBuilder.withBody(eventBody,header));
-                    CanalEntryConverter.numberInTransaction++;
+                    numberInTransaction++;
                 }
             }
         }
@@ -135,6 +139,7 @@ public class CanalEntryConverter {
         eventMap.put("db", entryHeader.getSchemaName());
         eventMap.put("data", rowMap);
         eventMap.put("type", eventType);
+        eventMap.put("agent", IPAddress);
         return  eventMap;
     }
 
