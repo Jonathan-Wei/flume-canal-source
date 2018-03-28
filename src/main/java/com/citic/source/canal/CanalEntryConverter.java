@@ -96,7 +96,6 @@ public class CanalEntryConverter {
                     Map<String, Object> eventMap = handleRowData(rowData, entry.getHeader(),
                             eventType.toString());
 
-                    LOGGER.debug("addToTableReceivedCount table: {}, count: {}", getTableKeyName(entry.getHeader()) , 1);
                     // 监控表数据
                     tableCounter.incrementTableReceivedCount(getTableKeyName(entry.getHeader()));
 
@@ -106,6 +105,7 @@ public class CanalEntryConverter {
 
                     String pk = getPK(rowData);
                     // 处理 event Header
+                    LOGGER.debug("rowdata pk:{}", pk);
                     Map<String, String> header = handleHeader(entry.getHeader(), pk);
 
                     events.add(EventBuilder.withBody(eventBody,header));
