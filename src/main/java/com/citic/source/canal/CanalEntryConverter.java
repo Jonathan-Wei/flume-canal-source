@@ -91,6 +91,7 @@ public class CanalEntryConverter {
             } else {
 
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
+
                     // 处理行数据
                     Map<String, Object> eventMap = handleRowData(rowData, entry.getHeader(),
                             eventType.toString());
@@ -102,8 +103,10 @@ public class CanalEntryConverter {
                     byte[] eventBody = gson.toJson(eventMap, new TypeToken<Map<String, Object>>(){}.getType())
                             .getBytes(Charset.forName("UTF-8"));
 
+
+                    String pk = getPK(rowData);
                     // 处理 event Header
-                    Map<String, String> header = handleHeader(entry.getHeader());
+                    Map<String, String> header = handleHeader(entry.getHeader(), pk);
 
                     events.add(EventBuilder.withBody(eventBody,header));
                     numberInTransaction++;
@@ -129,11 +132,6 @@ public class CanalEntryConverter {
             eventMap.put("old", beforeRowMap);
         }
 
-        for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
-            if (column.getIsKey()) {
-                eventMap.put("pk", column.getValue());
-            }
-        }
         eventMap.put("table", entryHeader.getTableName());
         eventMap.put("ts", Math.round(entryHeader.getExecuteTime() / 1000));
         eventMap.put("db", entryHeader.getSchemaName());
@@ -141,6 +139,20 @@ public class CanalEntryConverter {
         eventMap.put("type", eventType);
         eventMap.put("agent", IPAddress);
         return  eventMap;
+    }
+
+    /*
+    * 获取表的主键,用于kafka的分区key
+    * */
+    private static String getPK(CanalEntry.RowData rowData) {
+        String pk = null;
+        for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
+            // TODO 联合主键怎么处理
+            if (column.getIsKey()) {
+                pk = column.getValue();
+            }
+        }
+        return pk;
     }
 
     private static String getTableKeyName(CanalEntry.Header entryHeader) {
@@ -152,11 +164,15 @@ public class CanalEntryConverter {
     /*
     * 处理 Event Header 获取数据的 topic
     * */
-    private static Map<String, String> handleHeader(CanalEntry.Header entryHeader) {
+    private static Map<String, String> handleHeader(CanalEntry.Header entryHeader, String kafkaKey) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
 
         Map<String, String> header = new HashMap<String, String>();
+        if (kafkaKey != null){
+            // 将表的主键作为kafka分区的key
+            header.put("key", kafkaKey);
+        }
         header.put("topic", topic);
         header.put("numInTransaction", String.valueOf(CanalEntryConverter.numberInTransaction));
         return header;
