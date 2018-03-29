@@ -147,9 +147,11 @@ public class CanalEntryConverter {
     private static String getPK(CanalEntry.RowData rowData) {
         String pk = null;
         for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
-            // TODO 联合主键怎么处理
             if (column.getIsKey()) {
-                pk = column.getValue();
+                if (pk == null) {
+                    pk = "";
+                }
+                pk += column.getValue();
             }
         }
         return pk;
