@@ -56,6 +56,9 @@ public class CanalConf {
         * 设置表名与字段过滤对应 table
         * */
     public void setTableFieldsFilter(String tableFieldsFilter) {
+        if (Strings.isNullOrEmpty(tableFieldsFilter))
+            return;
+
         // schema.table_name:field_name,field_name;schema.table_name:field_name,field_name
         this.tableFieldsFilter = HashBasedTable.create();
         Splitter.on(';')
@@ -75,11 +78,16 @@ public class CanalConf {
     /*
     * 判断表名，字段是否在过滤列表中
     * */
-    public boolean isFiledInTable(String schemaTableName, String fieldName) {
+    public boolean isFieldNeedOutput(String schemaTableName, String fieldName) {
         if (this.tableFieldsFilter != null) {
-            return this.tableFieldsFilter.contains(schemaTableName, fieldName);
+            /*
+            * 这里的逻辑为,如果表没有配置字段过滤,则不对表做过滤,输出表的全部字段
+            * 如果表配置了字段过滤,在只有配置中的字段会输出到最终结果
+            * */
+            return !this.tableFieldsFilter.containsRow(schemaTableName)
+                    || this.tableFieldsFilter.containsColumn(fieldName);
         } else {
-            return false;
+            return true;
         }
     }
 
@@ -87,6 +95,8 @@ public class CanalConf {
     * 设置表名和 topic 对应 map
     * */
     public void setTableToTopicMap(String tableToTopicMap) {
+        if(Strings.isNullOrEmpty(tableToTopicMap))
+            return;
         // test.test:test123;test.test1:test234
         this.tableToTopicMap  = Splitter.on(';')
                 .omitEmptyStrings()

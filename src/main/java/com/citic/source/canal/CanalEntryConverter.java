@@ -194,7 +194,7 @@ public class CanalEntryConverter {
             int sqlType = column.getSqlType();
 
             // 根据配置做字段过滤
-            if (!canalConf.isFiledInTable(keyName, column.getName())) {
+            if (!canalConf.isFieldNeedOutput(keyName, column.getName())) {
                 continue;
             }
 
