@@ -44,18 +44,13 @@ public class CanalEntryConverter {
     private static Long numberInTransaction = 0L;
 
     private static CanalConf canalConf;
-    private static SourceCounter tableCounter;
 
     public static void setCanalConf(CanalConf argCanalConf) {
         canalConf = argCanalConf;
         IPAddress = Utility.getLocalIP(canalConf.getIpInterface());
     }
 
-    public static void setTableCounter(SourceCounter argTableCounter) {
-        tableCounter = argTableCounter;
-    }
-
-    public static List<Event> convert(CanalEntry.Entry entry) {
+    public static List<Event> convert(CanalEntry.Entry entry, SourceCounter tableCounter) {
         List<Event> events = new ArrayList<Event>();
 
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
@@ -195,6 +190,7 @@ public class CanalEntryConverter {
 
             // 根据配置做字段过滤
             if (!canalConf.isFieldNeedOutput(keyName, column.getName())) {
+                LOGGER.debug("column delete by filter {}:{}", keyName, column.getName());
                 continue;
             }
 

@@ -69,7 +69,7 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
 
         canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
-        LOGGER.debug("table_fields_table: {}",  canalConf.getTableFieldsFilter().toString());
+        LOGGER.debug("table_fields_table: {}",  canalConf.getTableFieldsFilter());
     }
 
     @Override
@@ -97,7 +97,7 @@ public class CanalSource extends AbstractPollableSource
         if (tableCounter == null) {
             Object[] objectArray = canalConf.getTableToTopicMap().keySet().toArray();
             String[] stringArray = Arrays.copyOf(objectArray, objectArray.length, String[].class);
-            tableCounter = new SourceCounter(SOURCE_TABLES_COUNTER, stringArray);
+            tableCounter = new SourceCounter(getName() + "-" + SOURCE_TABLES_COUNTER, stringArray);
         }
     }
 
@@ -120,11 +120,11 @@ public class CanalSource extends AbstractPollableSource
         tableCounter.start();
 
         CanalEntryConverter.setCanalConf(canalConf);
-        CanalEntryConverter.setTableCounter(tableCounter);
     }
 
     @Override
     protected Status doProcess() {
+        LOGGER.debug("doProcess...");
         Message message;
         try {
             message = canalClient.fetchRows(canalConf.getBatchSize());
@@ -141,7 +141,7 @@ public class CanalSource extends AbstractPollableSource
         List<Event> eventsAll = Lists.newArrayList();
 
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = CanalEntryConverter.convert(entry);
+            List<Event> events = CanalEntryConverter.convert(entry, tableCounter);
             eventsAll.addAll(events);
         }
 

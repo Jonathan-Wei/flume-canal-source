@@ -1,12 +1,18 @@
 package com.citic.instrumentation;
 
+import com.citic.source.canal.CanalConf;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import org.apache.flume.instrumentation.MonitoredCounterGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 
 public class SourceCounter extends MonitoredCounterGroup implements
         SourceCounterMBean {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MonitoredCounterGroup.class);
 
     private String[] attributes;
     private Map<String, Long> localMap;
@@ -20,6 +26,10 @@ public class SourceCounter extends MonitoredCounterGroup implements
     }
 
     public long incrementTableReceivedCount(String tableName) {
+        LOGGER.debug("tableName:{}", tableName);
+        for (String attr: this.attributes) {
+            LOGGER.debug("attr:{}", attr);
+        }
         return increment(tableName);
     }
 
