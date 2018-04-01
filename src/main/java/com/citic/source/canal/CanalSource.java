@@ -42,6 +42,7 @@ public class CanalSource extends AbstractPollableSource
 
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private SourceCounter tableCounter;
+    private CanalEntryConverter entryConverter;
 
     /*
     * 获取配置
@@ -119,7 +120,7 @@ public class CanalSource extends AbstractPollableSource
         sourceCounter.start();
         tableCounter.start();
 
-        CanalEntryConverter.setCanalConf(canalConf);
+        entryConverter = new CanalEntryConverter(canalConf, tableCounter);
     }
 
     @Override
@@ -141,7 +142,7 @@ public class CanalSource extends AbstractPollableSource
         List<Event> eventsAll = Lists.newArrayList();
 
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = CanalEntryConverter.convert(entry, tableCounter);
+            List<Event> events = entryConverter.convert(entry);
             eventsAll.addAll(events);
         }
 

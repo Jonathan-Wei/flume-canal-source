@@ -38,19 +38,22 @@ import java.util.Map;
 public class CanalEntryConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryConverter.class);
-    private static String IPAddress;
-
     private static final Gson gson = new Gson();
-    private static Long numberInTransaction = 0L;
 
-    private static CanalConf canalConf;
+    private Long numberInTransaction = 0L;
+    private CanalConf canalConf;
+    private SourceCounter tableCounter;
+    private String IPAddress;
 
-    public static void setCanalConf(CanalConf argCanalConf) {
-        canalConf = argCanalConf;
+
+    public CanalEntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
+        this.canalConf = canalConf;
+        this.tableCounter = tableCounter;
         IPAddress = Utility.getLocalIP(canalConf.getIpInterface());
     }
 
-    public static List<Event> convert(CanalEntry.Entry entry, SourceCounter tableCounter) {
+
+    public  List<Event> convert(CanalEntry.Entry entry) {
         List<Event> events = new ArrayList<Event>();
 
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
@@ -115,15 +118,15 @@ public class CanalEntryConverter {
     /*
     * 处理行数据，并添加其他字段信息
     * */
-    private static Map<String, Object> handleRowData(CanalEntry.RowData rowData,
+    private Map<String, Object> handleRowData(CanalEntry.RowData rowData,
                                        CanalEntry.Header entryHeader, String eventType) {
         Map<String, Object> eventMap = new HashMap<String, Object>();
 
         Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList(),
-                                                            canalConf, entryHeader);
+                                                            entryHeader);
         if (canalConf.getOldDataRequired()) {
             Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList(),
-                                                                      canalConf, entryHeader);
+                                                                      entryHeader);
             eventMap.put("old", beforeRowMap);
         }
 
@@ -139,7 +142,7 @@ public class CanalEntryConverter {
     /*
     * 获取表的主键,用于kafka的分区key
     * */
-    private static String getPK(CanalEntry.RowData rowData) {
+    private String getPK(CanalEntry.RowData rowData) {
         String pk = null;
         for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
             if (column.getIsKey()) {
@@ -152,7 +155,7 @@ public class CanalEntryConverter {
         return pk;
     }
 
-    private static String getTableKeyName(CanalEntry.Header entryHeader) {
+    private String getTableKeyName(CanalEntry.Header entryHeader) {
         String table = entryHeader.getTableName();
         String database = entryHeader.getSchemaName();
         return database + '.' + table;
@@ -161,7 +164,7 @@ public class CanalEntryConverter {
     /*
     * 处理 Event Header 获取数据的 topic
     * */
-    private static Map<String, String> handleHeader(CanalEntry.Header entryHeader, String kafkaKey) {
+    private Map<String, String> handleHeader(CanalEntry.Header entryHeader, String kafkaKey) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
 
@@ -171,15 +174,14 @@ public class CanalEntryConverter {
             header.put("key", kafkaKey);
         }
         header.put("topic", topic);
-        header.put("numInTransaction", String.valueOf(CanalEntryConverter.numberInTransaction));
+        header.put("numInTransaction", String.valueOf(numberInTransaction));
         return header;
     }
 
     /*
     * 对列数据进行解析
     * */
-    private static Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns,
-                                                              CanalConf canalConf,
+    private Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns,
                                                               CanalEntry.Header entryHeader) {
         Map<String, Object> rowMap = new HashMap<String, Object>();
 
