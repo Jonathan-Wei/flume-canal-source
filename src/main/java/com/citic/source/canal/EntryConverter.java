@@ -141,6 +141,7 @@ public class EntryConverter {
         eventMap.put("db", entryHeader.getSchemaName());
         eventMap.put("sql", sql);
         eventMap.put("agent", IPAddress);
+        eventMap.put("from", canalConf.getSourceDBIP());
         return eventMap;
     }
 
@@ -162,6 +163,7 @@ public class EntryConverter {
         eventMap.put("data", rowMap);
         eventMap.put("type", eventType);
         eventMap.put("agent", IPAddress);
+        eventMap.put("from", canalConf.getSourceDBIP());
         return  eventMap;
     }
 
@@ -169,15 +171,18 @@ public class EntryConverter {
     * 获取表的主键,用于kafka的分区key
     * */
     private String getPK(CanalEntry.RowData rowData) {
-        String pk = null;
+        StringBuilder pk = null;
         for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
             if (column.getIsKey()) {
                 if (pk == null)
-                    pk = "";
-                pk += column.getValue();
+                    pk = new StringBuilder();
+                pk.append(column.getValue());
             }
         }
-        return pk;
+        if (pk == null)
+            return null;
+        else
+            return pk.toString();
     }
 
     private String getTableKeyName(CanalEntry.Header entryHeader) {

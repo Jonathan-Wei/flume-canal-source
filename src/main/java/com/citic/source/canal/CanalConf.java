@@ -52,9 +52,19 @@ public class CanalConf {
         this.ipInterface = ipInterface;
     }
 
+
+    public String getSourceDBIP() {
+        // destination example: 192_168_2_24-3306
+        String[] result =  this.destination.split("-");
+        if (result.length == 2)
+            return result[0].replace("_", ".");
+        else
+            return this.destination;
+    }
+
     /*
-        * 设置表名与字段过滤对应 table
-        * */
+    * 设置表名与字段过滤对应 table
+    * */
     public void setTableFieldsFilter(String tableFieldsFilter) {
         if (Strings.isNullOrEmpty(tableFieldsFilter))
             return;
