@@ -35,9 +35,9 @@ import java.util.List;
 import java.util.Map;
 
 
-public class CanalEntryConverter {
+public class EntryConverter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CanalEntryConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
     private static final Gson gson = new Gson();
 
     private Long numberInTransaction = 0L;
@@ -46,7 +46,7 @@ public class CanalEntryConverter {
     private String IPAddress;
 
 
-    public CanalEntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
+    public EntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
         this.canalConf = canalConf;
         this.tableCounter = tableCounter;
         IPAddress = Utility.getLocalIP(canalConf.getIpInterface());

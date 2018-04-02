@@ -42,7 +42,7 @@ public class CanalSource extends AbstractPollableSource
 
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private SourceCounter tableCounter;
-    private CanalEntryConverter entryConverter;
+    private EntryConverter entryConverter;
 
     /*
     * 获取配置
@@ -105,8 +105,7 @@ public class CanalSource extends AbstractPollableSource
     @Override
     protected void doStart() throws FlumeException {
         LOGGER.debug("start...");
-
-        LOGGER.info("Object name: {}", this.getClass().getName().toString());
+        LOGGER.info("Object name: {}", this.getClass().getName());
 
         try {
             this.canalClient = new CanalClient(canalConf);
@@ -120,7 +119,7 @@ public class CanalSource extends AbstractPollableSource
         sourceCounter.start();
         tableCounter.start();
 
-        entryConverter = new CanalEntryConverter(canalConf, tableCounter);
+        entryConverter = new EntryConverter(canalConf, tableCounter);
     }
 
     @Override
