@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.Charset;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +44,7 @@ public class EntryConverter {
     private CanalConf canalConf;
     private SourceCounter tableCounter;
     private String IPAddress;
+    private String entrySql;
 
 
     public EntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
@@ -74,7 +74,6 @@ public class EntryConverter {
         }
 
         if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
-
             CanalEntry.RowChange rowChange;
             try {
                 rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
@@ -82,32 +81,29 @@ public class EntryConverter {
                 LOGGER.warn("parse row data event has an error , data:" + entry.toString(), e);
                 throw new RuntimeException("parse event has an error , data:" + entry.toString(), e);
             }
-
             CanalEntry.EventType eventType = rowChange.getEventType();
 
-            if (eventType == CanalEntry.EventType.QUERY || rowChange.getIsDdl()) {
-                // TODO get sql
+            // canal 在 QUERY 事件没有做表过滤
+            if (eventType == CanalEntry.EventType.QUERY) {
+                entrySql = rowChange.getSql();
+            } else if (rowChange.getIsDdl()) {
+                events.add(getSqlEvent(entry, rowChange.getSql()));
             } else {
+                // 在每执行一次数据库数据更新操作前都会执行一次 QUERY 操作获取操作的sql语句
+                events.add(getSqlEvent(entry, entrySql));
 
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
-
                     // 处理行数据
-                    Map<String, Object> eventMap = handleRowData(rowData, entry.getHeader(),
+                    Map<String, Object> eventData = handleRowData(rowData, entry.getHeader(),
                             eventType.toString());
-
                     // 监控表数据
                     tableCounter.incrementTableReceivedCount(getTableKeyName(entry.getHeader()));
 
-                    byte[] eventBody = gson.toJson(eventMap, new TypeToken<Map<String, Object>>(){}.getType())
-                            .getBytes(Charset.forName("UTF-8"));
-
-
                     String pk = getPK(rowData);
                     // 处理 event Header
-                    LOGGER.debug("rowdata pk:{}", pk);
-                    Map<String, String> header = handleHeader(entry.getHeader(), pk);
-
-                    events.add(EventBuilder.withBody(eventBody,header));
+                    LOGGER.debug("RowData pk:{}", pk);
+                    Map<String, String> header = handleRowDataHeader(entry.getHeader(), pk);
+                    events.add(dataToEvent(eventData, header));
                     numberInTransaction++;
                 }
             }
@@ -117,17 +113,46 @@ public class EntryConverter {
     }
 
     /*
+    * 获取 sql topic Event数据
+    * */
+    private Event getSqlEvent(CanalEntry.Entry entry, String sql) {
+        Map<String, Object> eventSql = handleSQL(sql, entry.getHeader());
+        Map<String, String> sqlHeader = Maps.newHashMap();
+        sqlHeader.put("topic", "sql");
+        return dataToEvent(eventSql, sqlHeader);
+    }
+
+    /*
+    * 将 data, header 转换为 Event 格式
+    * */
+    private Event dataToEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
+        byte[] eventBody = gson.toJson(eventData, new TypeToken<Map<String, Object>>(){}.getType())
+                .getBytes(Charset.forName("UTF-8"));
+        return EventBuilder.withBody(eventBody,eventHeader);
+    }
+
+    /*
+    * 处理 sql topic 的数据格式
+    * */
+    private Map<String, Object> handleSQL(String sql, CanalEntry.Header entryHeader) {
+        Map<String, Object> eventMap = Maps.newHashMap();
+        eventMap.put("table", entryHeader.getTableName());
+        eventMap.put("ts", Math.round(entryHeader.getExecuteTime() / 1000));
+        eventMap.put("db", entryHeader.getSchemaName());
+        eventMap.put("sql", sql);
+        eventMap.put("agent", IPAddress);
+        return eventMap;
+    }
+
+    /*
     * 处理行数据，并添加其他字段信息
     * */
     private Map<String, Object> handleRowData(CanalEntry.RowData rowData,
                                        CanalEntry.Header entryHeader, String eventType) {
-        Map<String, Object> eventMap = new HashMap<String, Object>();
-
-        Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList(),
-                                                            entryHeader);
+        Map<String, Object> eventMap = Maps.newHashMap();
+        Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
         if (canalConf.getOldDataRequired()) {
-            Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList(),
-                                                                      entryHeader);
+            Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader);
             eventMap.put("old", beforeRowMap);
         }
 
@@ -147,9 +172,8 @@ public class EntryConverter {
         String pk = null;
         for(CanalEntry.Column column : rowData.getAfterColumnsList()) {
             if (column.getIsKey()) {
-                if (pk == null) {
+                if (pk == null)
                     pk = "";
-                }
                 pk += column.getValue();
             }
         }
@@ -165,11 +189,11 @@ public class EntryConverter {
     /*
     * 处理 Event Header 获取数据的 topic
     * */
-    private Map<String, String> handleHeader(CanalEntry.Header entryHeader, String kafkaKey) {
+    private Map<String, String> handleRowDataHeader(CanalEntry.Header entryHeader, String kafkaKey) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
 
-        Map<String, String> header = new HashMap<String, String>();
+        Map<String, String> header = Maps.newHashMap();
         if (kafkaKey != null){
             // 将表的主键作为kafka分区的key
             header.put("key", kafkaKey);
@@ -182,21 +206,17 @@ public class EntryConverter {
     /*
     * 对列数据进行解析
     * */
-    private Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns,
-                                                              CanalEntry.Header entryHeader) {
+    private Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns, CanalEntry.Header entryHeader) {
         Map<String, Object> rowMap = Maps.newHashMap();
 
         String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
-
         for(CanalEntry.Column column : columns) {
             int sqlType = column.getSqlType();
-
             // 根据配置做字段过滤
             if (!canalConf.isFieldNeedOutput(keyName, column.getName())) {
                 LOGGER.debug("column delete by filter {}:{}", keyName, column.getName());
                 continue;
             }
-
             String stringValue = column.getValue();
             Object colValue;
 
@@ -228,8 +248,6 @@ public class EntryConverter {
             }
             rowMap.put(column.getName(), colValue);
         }
-
         return rowMap;
     }
-
 }
