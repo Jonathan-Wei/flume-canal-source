@@ -44,6 +44,7 @@ public class EntryConverter {
     private CanalConf canalConf;
     private SourceCounter tableCounter;
     private String IPAddress;
+    private String fromDBIP;
     private String entrySql;
 
 
@@ -51,10 +52,11 @@ public class EntryConverter {
         this.canalConf = canalConf;
         this.tableCounter = tableCounter;
         IPAddress = Utility.getLocalIP(canalConf.getIpInterface());
+        fromDBIP = canalConf.getFromDBIP();
     }
 
 
-    public  List<Event> convert(CanalEntry.Entry entry) {
+    public List<Event> convert(CanalEntry.Entry entry) {
         List<Event> events = new ArrayList<Event>();
 
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
@@ -141,7 +143,7 @@ public class EntryConverter {
         eventMap.put("db", entryHeader.getSchemaName());
         eventMap.put("sql", sql);
         eventMap.put("agent", IPAddress);
-        eventMap.put("from", canalConf.getSourceDBIP());
+        eventMap.put("from", fromDBIP);
         return eventMap;
     }
 
@@ -163,7 +165,7 @@ public class EntryConverter {
         eventMap.put("data", rowMap);
         eventMap.put("type", eventType);
         eventMap.put("agent", IPAddress);
-        eventMap.put("from", canalConf.getSourceDBIP());
+        eventMap.put("from", fromDBIP);
         return  eventMap;
     }
 

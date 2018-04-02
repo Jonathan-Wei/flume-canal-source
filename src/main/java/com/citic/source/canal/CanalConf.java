@@ -53,7 +53,7 @@ public class CanalConf {
     }
 
 
-    public String getSourceDBIP() {
+    public String getFromDBIP() {
         // destination example: 192_168_2_24-3306
         String[] result =  this.destination.split("-");
         if (result.length == 2)
