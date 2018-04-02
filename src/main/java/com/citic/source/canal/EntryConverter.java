@@ -19,6 +19,7 @@ package com.citic.source.canal;
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -183,7 +184,7 @@ public class EntryConverter {
     * */
     private Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns,
                                                               CanalEntry.Header entryHeader) {
-        Map<String, Object> rowMap = new HashMap<String, Object>();
+        Map<String, Object> rowMap = Maps.newHashMap();
 
         String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
 
@@ -201,7 +202,13 @@ public class EntryConverter {
 
             try {
                 switch (sqlType) {
-                    // Date is day + moth + year
+                    /*
+                    * date 2018-04-02
+                    * time 02:34:51
+                    * datetime 2018-04-02 11:43:16
+                    * timestamp 2018-04-02 11:45:02
+                    * mysql 默认格式如上，现在不做处理后续根据需要再更改
+                    * */
                     case Types.DATE:
                     case Types.TIME:
                     case Types.TIMESTAMP: {
