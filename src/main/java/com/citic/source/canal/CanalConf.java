@@ -39,7 +39,7 @@ public class CanalConf {
     private int batchSize;
     private String serverUrl;
     private String serverUrls;
-    private String tableFilter = "";
+    private String tableFilter;
     private Boolean oldDataRequired;
     private Map<String, String> tableToTopicMap;
 
@@ -106,8 +106,9 @@ public class CanalConf {
     * 设置表名和 topic 对应 map
     * */
     public void setTableToTopicMap(String tableToTopicMap) {
-        if(Strings.isNullOrEmpty(tableToTopicMap))
-            return;
+        if (Strings.isNullOrEmpty(tableToTopicMap)){
+            throw new IllegalArgumentException("tableToTopicMap cannot empty");
+        }
         // test.test:test123;test.test1:test234
         Map temp = Splitter.on(';')
                 .omitEmptyStrings()
@@ -142,6 +143,9 @@ public class CanalConf {
     }
 
     public void setZkServers(String zkServers) {
+        if (Strings.isNullOrEmpty(zkServers)){
+            throw new IllegalArgumentException("zkServers cannot empty");
+        }
         this.zkServers = zkServers;
     }
 
@@ -150,6 +154,9 @@ public class CanalConf {
     }
 
     public void setDestination(String destination) {
+        if (Strings.isNullOrEmpty(destination)){
+            throw new IllegalArgumentException("destination cannot empty");
+        }
         this.destination = destination;
     }
 
@@ -198,6 +205,9 @@ public class CanalConf {
     }
 
     public void setTableFilter(String tableFilter) {
+        if (Strings.isNullOrEmpty(tableFilter)){
+            throw new IllegalArgumentException("tableFilter cannot empty");
+        }
         this.tableFilter = tableFilter;
     }
 

@@ -1,5 +1,6 @@
 package com.citic.instrumentation;
 
+import com.citic.helper.RegexHashMap;
 import com.citic.source.canal.CanalConf;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
@@ -16,6 +17,7 @@ public class SourceCounter extends MonitoredCounterGroup implements
 
     private String[] attributes;
     private Map<String, Long> localMap;
+    private Map<String, String> tableRegexMap;
     private Gson gson = new Gson();
 
     public SourceCounter(String name, String[] attributes) {
@@ -23,14 +25,18 @@ public class SourceCounter extends MonitoredCounterGroup implements
         this.attributes = attributes;
 
         localMap = Maps.newHashMap();
+        tableRegexMap = new RegexHashMap<>();
+        for (String attr : attributes) {
+            tableRegexMap.put(attr, attr);
+        }
     }
 
     public long incrementTableReceivedCount(String tableName) {
         LOGGER.debug("tableName:{}", tableName);
-        for (String attr: this.attributes) {
-            LOGGER.debug("attr:{}", attr);
-        }
-        return increment(tableName);
+        // 用户配置的可能为 正则表达式,但这里传递进来的是解析后的表名
+        // eg: attribute = test\\.test.*, tableName = test.test1
+        String regexTableName = this.tableRegexMap.get(tableName);
+        return increment(regexTableName);
     }
 
     @Override

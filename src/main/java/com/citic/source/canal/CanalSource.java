@@ -96,9 +96,8 @@ public class CanalSource extends AbstractPollableSource
             sourceCounter = new org.apache.flume.instrumentation.SourceCounter(getName());
 
         if (tableCounter == null) {
-            Object[] objectArray = canalConf.getTableToTopicMap().keySet().toArray();
-            String[] stringArray = Arrays.copyOf(objectArray, objectArray.length, String[].class);
-            tableCounter = new SourceCounter(getName() + "-" + SOURCE_TABLES_COUNTER, stringArray);
+            tableCounter = new SourceCounter(getName() + "-" + SOURCE_TABLES_COUNTER,
+                    canalConf.getTableFilter().split(","));
         }
     }
 
