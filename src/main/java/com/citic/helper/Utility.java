@@ -15,7 +15,7 @@ public class Utility {
 
     public static String getLocalIP(String interfaceName) {
         String ip = DEFAULT_IP;
-        Enumeration<?> e1 = null;
+        Enumeration<?> e1;
         try {
             e1 = NetworkInterface.getNetworkInterfaces();
         } catch (SocketException e) {

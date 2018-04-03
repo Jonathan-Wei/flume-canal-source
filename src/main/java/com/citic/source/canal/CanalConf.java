@@ -16,6 +16,7 @@
  */
 package com.citic.source.canal;
 
+import com.citic.helper.RegexHashMap;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.*;
@@ -70,7 +71,7 @@ public class CanalConf {
             return;
 
         // schema.table_name:field_name,field_name;schema.table_name:field_name,field_name
-        this.tableFieldsFilter = HashBasedTable.create();
+        this.tableFieldsFilter = RegexHashBasedTable.create();
         Splitter.on(';')
             .omitEmptyStrings()
             .trimResults()
@@ -108,11 +109,14 @@ public class CanalConf {
         if(Strings.isNullOrEmpty(tableToTopicMap))
             return;
         // test.test:test123;test.test1:test234
-        this.tableToTopicMap  = Splitter.on(';')
+        Map temp = Splitter.on(';')
                 .omitEmptyStrings()
                 .trimResults()
                 .withKeyValueSeparator(":")
                 .split(tableToTopicMap);
+
+        this.tableToTopicMap  = new RegexHashMap<>();
+        this.tableToTopicMap.putAll(temp);
     }
 
     public Map<String, String> getTableToTopicMap() {
