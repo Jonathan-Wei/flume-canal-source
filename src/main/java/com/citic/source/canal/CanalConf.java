@@ -56,11 +56,7 @@ public class CanalConf {
 
     public String getFromDBIP() {
         // destination example: 192_168_2_24-3306
-        String[] result =  this.destination.split("-");
-        if (result.length == 2)
-            return result[0].replace("_", ".");
-        else
-            return this.destination;
+        return this.destination.replace("-", ":").replace("_", ".");
     }
 
     /*
