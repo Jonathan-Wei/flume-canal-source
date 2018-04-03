@@ -28,6 +28,7 @@ import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -38,7 +39,8 @@ import java.util.Map;
 public class EntryConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
-    private static final Gson gson = new Gson();
+    private static final Gson GSON = new Gson();
+    private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
 
     private Long numberInTransaction = 0L;
     private CanalConf canalConf;
@@ -46,6 +48,7 @@ public class EntryConverter {
     private String IPAddress;
     private String fromDBIP;
     private String entrySql;
+
 
 
     public EntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
@@ -128,8 +131,7 @@ public class EntryConverter {
     * 将 data, header 转换为 Event 格式
     * */
     private Event dataToEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
-        byte[] eventBody = gson.toJson(eventData, new TypeToken<Map<String, Object>>(){}.getType())
-                .getBytes(Charset.forName("UTF-8"));
+        byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
         return EventBuilder.withBody(eventBody,eventHeader);
     }
 
