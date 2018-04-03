@@ -20,7 +20,7 @@ public class RegexHashBasedTable<C,V> extends StandardTable<String, C, V> {
 
         @Override
         public Map<C, V> get() {
-            return Maps.newLinkedHashMapWithExpectedSize(expectedSize);
+            return Maps.newHashMapWithExpectedSize(expectedSize);
         }
 
         private static final long serialVersionUID = 0;
