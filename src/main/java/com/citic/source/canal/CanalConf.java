@@ -17,6 +17,8 @@
 package com.citic.source.canal;
 
 import com.citic.helper.RegexHashMap;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.*;
@@ -39,11 +41,11 @@ public class CanalConf {
     private int batchSize;
     private String serverUrl;
     private String serverUrls;
-    private String tableFilter;
     private Boolean oldDataRequired;
-    private Map<String, String> tableToTopicMap;
 
-    private Table<String, String, Boolean> tableFieldsFilter;
+    private Map<String, String> tableToTopicMap = new RegexHashMap<>();
+    private Table<String, String, Boolean> tableFieldsFilter = RegexHashBasedTable.create();
+    private List<String> filterTableList = Lists.newArrayList();
 
     public String getIpInterface() {
         return ipInterface;
@@ -65,19 +67,26 @@ public class CanalConf {
     public void setTableFieldsFilter(String tableFieldsFilter) {
         if (Strings.isNullOrEmpty(tableFieldsFilter))
             return;
-
-        // schema.table_name:field_name,field_name;schema.table_name:field_name,field_name
-        this.tableFieldsFilter = RegexHashBasedTable.create();
+        // 这里表的顺序根据配置文件中 tableToTopicMap 表的顺序
+        // field_name,field_name;field_name,field_name
+        final int[] counter = {0};
         Splitter.on(';')
             .omitEmptyStrings()
             .trimResults()
-            .withKeyValueSeparator(":")
             .split(tableFieldsFilter)
-            .forEach((k, v) -> {
-                Iterable<String> fieldList =
-                        Splitter.on(",").omitEmptyStrings().trimResults().split(v);
-                for (String field : fieldList) {
-                    this.tableFieldsFilter.put(k, field, true);
+            .forEach(item -> {
+                try {
+                    String k = filterTableList.get(counter[0]);
+                    counter[0] += 1;
+                    Iterable<String> fieldList =
+                            Splitter.on(",").omitEmptyStrings().trimResults().split(item);
+
+                    for (String field : fieldList) {
+                        this.tableFieldsFilter.put(k, field, true);
+                    }
+                } catch (IndexOutOfBoundsException e) {
+                    throw new IndexOutOfBoundsException(
+                            String.format("tableFieldsFilter 列表个数和 tableToTopicMap 不匹配. %s", e.getMessage()));
                 }
             });
     }
@@ -106,14 +115,17 @@ public class CanalConf {
             throw new IllegalArgumentException("tableToTopicMap cannot empty");
         }
         // test.test:test123;test.test1:test234
-        Map temp = Splitter.on(';')
+        Splitter.on(';')
                 .omitEmptyStrings()
                 .trimResults()
-                .withKeyValueSeparator(":")
-                .split(tableToTopicMap);
-
-        this.tableToTopicMap  = new RegexHashMap<>();
-        this.tableToTopicMap.putAll(temp);
+                .split(tableToTopicMap)
+                .forEach(item ->{
+                    String[] result =  item.split(":");
+                    Preconditions.checkArgument(result.length == 2,
+                            "tableToTopicMap format incorrect eg:db.tbl1:topic1;db.tbl2:topic2");
+                    filterTableList.add(result[0].trim());
+                    this.tableToTopicMap.put(result[0].trim(), result[1].trim());
+                });
     }
 
     public Map<String, String> getTableToTopicMap() {
@@ -121,8 +133,8 @@ public class CanalConf {
     }
 
     /*
-        * 根据表名获取 topic
-        * */
+    * 根据表名获取 topic
+    * */
     public String getTableTopic(String schemaTableName) {
         if (this.tableToTopicMap != null)
             return this.tableToTopicMap.getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
@@ -196,16 +208,13 @@ public class CanalConf {
         this.serverUrls = serverUrls;
     }
 
+    /*
+    * 获取需要过滤的表列表
+    * */
     public String getTableFilter() {
-        return tableFilter;
+        return Joiner.on(",").join(filterTableList);
     }
 
-    public void setTableFilter(String tableFilter) {
-        if (Strings.isNullOrEmpty(tableFilter)){
-            throw new IllegalArgumentException("tableFilter cannot empty");
-        }
-        this.tableFilter = tableFilter;
-    }
 
     public Boolean getOldDataRequired() {
         return oldDataRequired;
