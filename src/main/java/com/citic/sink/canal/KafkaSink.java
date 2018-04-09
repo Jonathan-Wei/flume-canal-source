@@ -3,11 +3,6 @@ package com.citic.sink.canal;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumReader;
@@ -417,34 +412,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
         } else {
             bytes = event.getBody();
         }
-        return bytes;
-    }
-
-
-    private byte[] serializeAvroEvent(Event event, boolean useAvroEventFormat) throws IOException {
-        byte[] bytes;
-        String userSchema = "{\"type\":\"record\"," +
-                "\"name\":\"myrecord\"," +
-                "\"fields\":[{\"name\":\"f1\",\"type\":\"string\"}]}";
-
-        String USER_SCHEMA = "{"
-                + "\"type\":\"record\","
-                + "\"name\":\"myrecord\","
-                + "\"fields\":["
-                + "  { \"name\":\"str1\", \"type\":\"string\" },"
-                + "  { \"name\":\"str2\", \"type\":\"string\" },"
-                + "  { \"name\":\"int1\", \"type\":\"int\" }"
-                + "]}";
-
-        Schema.Parser parser = new Schema.Parser();
-        Schema schema = parser.parse(userSchema);
-
-        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-
-        GenericRecord avroRecord = new GenericData.Record(schema);
-        avroRecord.put("f1", "value1");
-
-        bytes = recordInjection.apply(avroRecord);
         return bytes;
     }
 
