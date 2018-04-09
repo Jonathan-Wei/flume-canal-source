@@ -155,19 +155,21 @@ public class EntryConverter {
     private Map<String, Object> handleRowData(CanalEntry.RowData rowData,
                                        CanalEntry.Header entryHeader, String eventType) {
         Map<String, Object> eventMap = Maps.newHashMap();
-        Map<String, Object> rowMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
+        Map<String, Object> rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
+        /* 之前的数据
         if (canalConf.getOldDataRequired()) {
             Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader);
             eventMap.put("old", beforeRowMap);
         }
+        */
 
-        eventMap.put("table", entryHeader.getTableName());
-        eventMap.put("ts", Math.round(entryHeader.getExecuteTime() / 1000));
-        eventMap.put("db", entryHeader.getSchemaName());
-        eventMap.put("data", rowMap);
-        eventMap.put("type", eventType);
-        eventMap.put("agent", IPAddress);
-        eventMap.put("from", fromDBIP);
+        eventMap.put("__table", entryHeader.getTableName());
+        eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
+        eventMap.put("__db", entryHeader.getSchemaName());
+        eventMap.put("__type", eventType);
+        eventMap.put("__agent", IPAddress);
+        eventMap.put("__from", fromDBIP);
+        eventMap.putAll(rowDataMap);
         return  eventMap;
     }
 
@@ -221,11 +223,6 @@ public class EntryConverter {
         String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
         for(CanalEntry.Column column : columns) {
             int sqlType = column.getSqlType();
-            // 根据配置做字段过滤
-            if (!canalConf.isFieldNeedOutput(keyName, column.getName())) {
-                LOGGER.debug("column delete by filter {}:{}", keyName, column.getName());
-                continue;
-            }
             String stringValue = column.getValue();
             Object colValue;
 

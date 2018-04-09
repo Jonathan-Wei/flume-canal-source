@@ -43,9 +43,20 @@ public class CanalConf {
     private String serverUrls;
     private Boolean oldDataRequired;
 
-    private Map<String, String> tableToTopicMap = new RegexHashMap<>();
-    private Table<String, String, Boolean> tableFieldsFilter = RegexHashBasedTable.create();
+    // topic list
+    private List<String> topicAppendList = Lists.newArrayList();
     private List<String> filterTableList = Lists.newArrayList();
+    // db.table -> topic
+    private Map<String, String> tableToTopicMap = new RegexHashMap<>();
+    // topic -> schema
+    private Map<String, String> topicToSchemaMap = Maps.newHashMap();
+
+
+    // topic -> schema fields list
+    private Map<String, List<String>> topicToSchemaFields = Maps.newHashMap();
+    // topic,schema_field -> table_field
+    private Table<String, String, String> tableFieldsFilter = HashBasedTable.create();
+
 
     public String getIpInterface() {
         return ipInterface;
@@ -61,51 +72,6 @@ public class CanalConf {
         return this.destination.replace("-", ":").replace("_", ".");
     }
 
-    /*
-    * 设置表名与字段过滤对应 table
-    * */
-    public void setTableFieldsFilter(String tableFieldsFilter) {
-        if (Strings.isNullOrEmpty(tableFieldsFilter))
-            return;
-        // 这里表的顺序根据配置文件中 tableToTopicMap 表的顺序
-        // field_name,field_name;field_name,field_name
-        final int[] counter = {0};
-        Splitter.on(';')
-            .omitEmptyStrings()
-            .trimResults()
-            .split(tableFieldsFilter)
-            .forEach(item -> {
-                try {
-                    String k = filterTableList.get(counter[0]);
-                    counter[0] += 1;
-                    Iterable<String> fieldList =
-                            Splitter.on(",").omitEmptyStrings().trimResults().split(item);
-
-                    for (String field : fieldList) {
-                        this.tableFieldsFilter.put(k, field, true);
-                    }
-                } catch (IndexOutOfBoundsException e) {
-                    throw new IndexOutOfBoundsException(
-                            String.format("tableFieldsFilter 列表个数和 tableToTopicMap 不匹配. %s", e.getMessage()));
-                }
-            });
-    }
-
-    /*
-    * 判断表名，字段是否在过滤列表中
-    * */
-    public boolean isFieldNeedOutput(String schemaTableName, String fieldName) {
-        if (this.tableFieldsFilter != null) {
-            /*
-            * 这里的逻辑为,如果表没有配置字段过滤,则不对表做过滤,输出表的全部字段
-            * 如果表配置了字段过滤,在只有配置中的字段会输出到最终结果
-            * */
-            return !this.tableFieldsFilter.containsRow(schemaTableName)
-                    || this.tableFieldsFilter.containsColumn(fieldName);
-        } else {
-            return true;
-        }
-    }
 
     /*
     * 设置表名和 topic 对应 map
@@ -114,23 +80,84 @@ public class CanalConf {
         if (Strings.isNullOrEmpty(tableToTopicMap)){
             throw new IllegalArgumentException("tableToTopicMap cannot empty");
         }
-        // test.test:test123;test.test1:test234
+        // test.test:test123:schema1;test.test1:test234:schema2
         Splitter.on(';')
                 .omitEmptyStrings()
                 .trimResults()
                 .split(tableToTopicMap)
                 .forEach(item ->{
                     String[] result =  item.split(":");
-                    Preconditions.checkArgument(result.length == 2,
-                            "tableToTopicMap format incorrect eg:db.tbl1:topic1;db.tbl2:topic2");
+                    Preconditions.checkArgument(result.length == 3,
+                            "tableToTopicMap format incorrect eg:db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
                     filterTableList.add(result[0].trim());
+                    topicAppendList.add(result[1].trim());
+
+                    // db.table -> topic
                     this.tableToTopicMap.put(result[0].trim(), result[1].trim());
+                    // topic -> avro schema
+                    this.topicToSchemaMap.put(result[1].trim(), result[2].trim());
                 });
     }
 
     public Map<String, String> getTableToTopicMap() {
         return tableToTopicMap;
     }
+
+
+    /*
+    * 设置表名与字段过滤对应 table
+    * */
+    public void setTableFieldsFilter(String tableFieldsFilter) {
+        if (Strings.isNullOrEmpty(tableFieldsFilter))
+            return;
+        // 这里表的顺序根据配置文件中 tableToTopicMap 表的顺序
+        // id|id1,name|name1;uid|uid2,name|name2
+        final int[] counter = {0};
+        Splitter.on(';')
+            .omitEmptyStrings()
+            .trimResults()
+            .split(tableFieldsFilter)
+            .forEach(item -> {
+                String topic = topicAppendList.get(counter[0]);
+                counter[0] += 1;
+
+                List<String> schemaFields = Lists.newArrayList();
+
+                Iterable<String> fieldList =
+                        Splitter.on(",").omitEmptyStrings().trimResults().split(item);
+
+                for (String field : fieldList) {
+                    String[] fieldTableSchema = field.split("\\|");
+                    Preconditions.checkArgument(fieldTableSchema.length == 2,
+                            "tableFieldsFilter 格式错误 eg: id|id1,name|name1;uid|uid2,name|name2");
+
+                    schemaFields.add(fieldTableSchema[1]);
+                    this.tableFieldsFilter.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
+                }
+
+                topicToSchemaFields.put(topic, schemaFields);
+
+            });
+
+    }
+
+    /*
+    * 判断表名，字段是否在过滤列表中
+    * */
+//    public boolean isFieldNeedOutput(String schemaTableName, String fieldName) {
+//        if (this.tableFieldsFilter != null) {
+//            /*
+//            * 这里的逻辑为,如果表没有配置字段过滤,则不对表做过滤,输出表的全部字段
+//            * 如果表配置了字段过滤,在只有配置中的字段会输出到最终结果
+//            * */
+//            return !this.tableFieldsFilter.containsRow(schemaTableName)
+//                    || this.tableFieldsFilter.containsColumn(fieldName);
+//        } else {
+//            return true;
+//        }
+//    }
+
+
 
     /*
     * 根据表名获取 topic
@@ -142,7 +169,7 @@ public class CanalConf {
             return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
     }
 
-    public Table<String, String, Boolean> getTableFieldsFilter() {
+    public Table<String, String, String> getTableFieldsFilter() {
         return this.tableFieldsFilter;
     }
 
