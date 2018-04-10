@@ -94,6 +94,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private boolean allowTopicOverride;
     private String topicHeader = null;
 
+
     private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
             Optional.absent();
     private Optional<SpecificDatumReader<AvroFlumeEvent>> reader =
@@ -309,18 +310,21 @@ public class KafkaSink extends AbstractSink implements Configurable {
         topicHeader = context.getString(KafkaSinkConstants.TOPIC_OVERRIDE_HEADER,
                 KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER);
 
+
         if (logger.isDebugEnabled()) {
             logger.debug(KafkaSinkConstants.AVRO_EVENT + " set to: {}", useAvroEventFormat);
         }
 
         kafkaFutures = new LinkedList<Future<RecordMetadata>>();
 
+        String registryUrl  = context.getString(SCHEMA_REGISTRY_URL);
         String bootStrapServers = context.getString(BOOTSTRAP_SERVERS_CONFIG);
+
         if (bootStrapServers == null || bootStrapServers.isEmpty()) {
             throw new ConfigurationException("Bootstrap Servers must be specified");
         }
 
-        setProducerProps(context, bootStrapServers);
+        setProducerProps(context, bootStrapServers, registryUrl);
 
         if (logger.isDebugEnabled() && LogPrivacyUtil.allowLogPrintConfig()) {
             logger.debug("Kafka producer properties: {}", kafkaProps);
@@ -385,13 +389,15 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
     }
 
-    private void setProducerProps(Context context, String bootStrapServers) {
+    private void setProducerProps(Context context, String bootStrapServers, String registryUrl) {
         kafkaProps.clear();
         kafkaProps.put(ProducerConfig.ACKS_CONFIG, DEFAULT_ACKS);
         //Defaults overridden based on config
         kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
         kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIAIZER);
 
+
+        kafkaProps.put("schema.registry.url", registryUrl);
 
         kafkaProps.putAll(context.getSubProperties(KAFKA_PRODUCER_PREFIX));
         kafkaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootStrapServers);
