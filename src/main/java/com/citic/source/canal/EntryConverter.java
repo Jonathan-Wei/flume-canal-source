@@ -56,7 +56,6 @@ public class EntryConverter {
     private String IPAddress;
     private String fromDBIP;
     private String entrySql;
-    private Schema.Parser parser;
 
 
 
@@ -65,8 +64,6 @@ public class EntryConverter {
         this.tableCounter = tableCounter;
         IPAddress = Utility.getLocalIP(canalConf.getIpInterface());
         fromDBIP = canalConf.getFromDBIP();
-
-        parser = new Schema.Parser();
     }
 
 
@@ -146,13 +143,13 @@ public class EntryConverter {
     * 将 data, header 转换为 JSON Event 格式
     * */
     private Event dataToAvroSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
-
         List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__sql", "__agent", "__from");
 
         String schemaName = "sql";
 
+        Schema.Parser parser = new Schema.Parser();
         String schemaString = getTableFieldSchema(attrList, schemaName);
-        Schema schema = this.parser.parse(schemaString);
+        Schema schema = parser.parse(schemaString);
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
 
         GenericRecord avroRecord = new GenericData.Record(schema);
@@ -199,8 +196,9 @@ public class EntryConverter {
 
         String schemaName = this.canalConf.getTopicToSchemaMap().get(topic);
 
+        Schema.Parser parser = new Schema.Parser();
         String schemaString = getTableFieldSchema(ListUtils.union(schemaFieldList, attrList), schemaName);
-        Schema schema = this.parser.parse(schemaString);
+        Schema schema = parser.parse(schemaString);
 
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
         GenericRecord avroRecord = new GenericData.Record(schema);
