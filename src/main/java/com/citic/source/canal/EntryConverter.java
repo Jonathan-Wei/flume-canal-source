@@ -186,7 +186,7 @@ public class EntryConverter {
             avroRecord.put(fieldStr, eventData.get(tableField));
         }
 
-        List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__type", "__agent", "__from");
+        List<String> attrList = Lists.newArrayList("drc_table", "drc_ts", "drc_db", "drc_type", "drc_agent", "drc_from");
         for (String fieldStr: attrList) {
             avroRecord.put(fieldStr, eventData.get(fieldStr));
         }
@@ -229,12 +229,12 @@ public class EntryConverter {
             eventMap.put("old", beforeRowMap);
         }
         */
-        eventMap.put("__table", entryHeader.getTableName());
-        eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
-        eventMap.put("__db", entryHeader.getSchemaName());
-        eventMap.put("__type", eventType.toString());
-        eventMap.put("__agent", IPAddress);
-        eventMap.put("__from", fromDBIP);
+        eventMap.put("drc_table", entryHeader.getTableName());
+        eventMap.put("drc_ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
+        eventMap.put("drc_db", entryHeader.getSchemaName());
+        eventMap.put("drc_type", eventType.toString());
+        eventMap.put("drc_agent", IPAddress);
+        eventMap.put("drc_from", fromDBIP);
         eventMap.putAll(rowDataMap);
         return  eventMap;
     }
