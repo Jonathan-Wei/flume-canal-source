@@ -109,9 +109,11 @@ public class EntryConverter {
                     String keyName = getTableKeyName(entry.getHeader());
                     String topic = canalConf.getTableTopic(keyName);
 
+                    LOGGER.debug("rowData rowData:", rowData);
                     // 处理行数据
                     Map<String, String> eventData = handleRowData(rowData, entry.getHeader(),
                             eventType);
+                    LOGGER.debug("eventData handleRowData:", eventData);
                     // 监控表数据
                     tableCounter.incrementTableReceivedCount(keyName);
 
