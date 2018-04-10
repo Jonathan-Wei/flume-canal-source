@@ -30,6 +30,7 @@ import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.collections.ListUtils;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
@@ -172,13 +173,17 @@ public class EntryConverter {
                                   Map<String, String> eventHeader, String topic) {
 
         List<String> schemaFieldList = this.canalConf.getTopicToSchemaFields().get(topic);
+        List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__type", "__agent", "__from");
+
         String schemaName = this.canalConf.getTopicToSchemaMap().get(topic);
 
         Schema.Parser parser = new Schema.Parser();
-        Schema schema = parser.parse(getTableFieldSchema(schemaFieldList, schemaName));
+
+        String schemaString = getTableFieldSchema(ListUtils.union(schemaFieldList, attrList), schemaName);
+        Schema schema = parser.parse(schemaString);
+
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-
-
+        
         GenericData.Record avroRecord = new GenericData.Record(schema);
 
         for (String fieldStr: schemaFieldList) {
@@ -186,7 +191,6 @@ public class EntryConverter {
             avroRecord.put(fieldStr, eventData.get(tableField));
         }
 
-        List<String> attrList = Lists.newArrayList("drc_table", "drc_ts", "drc_db", "drc_type", "drc_agent", "drc_from");
         for (String fieldStr: attrList) {
             avroRecord.put(fieldStr, eventData.get(fieldStr));
         }
@@ -229,12 +233,12 @@ public class EntryConverter {
             eventMap.put("old", beforeRowMap);
         }
         */
-        eventMap.put("drc_table", entryHeader.getTableName());
-        eventMap.put("drc_ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
-        eventMap.put("drc_db", entryHeader.getSchemaName());
-        eventMap.put("drc_type", eventType.toString());
-        eventMap.put("drc_agent", IPAddress);
-        eventMap.put("drc_from", fromDBIP);
+        eventMap.put("__table", entryHeader.getTableName());
+        eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
+        eventMap.put("__db", entryHeader.getSchemaName());
+        eventMap.put("__type", eventType.toString());
+        eventMap.put("__agent", IPAddress);
+        eventMap.put("__from", fromDBIP);
         eventMap.putAll(rowDataMap);
         return  eventMap;
     }
