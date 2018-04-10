@@ -18,7 +18,8 @@ public class KafkaSinkConstants {
     public static final String SCHEMA_HEADER = "schema";
     public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = "topic";
     public static final String TOPIC_OVERRIDE_HEADER = "topicHeader";
-    public static final String SCHEMA_REGISTRY_URL = "registryUrl";
+
+    public static final String SCHEMA_REGISTRY_URL = KAFKA_PREFIX + "registryUrl";
 
 
     public static final String ALLOW_TOPIC_OVERRIDE_HEADER = "allowTopicOverride";

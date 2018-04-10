@@ -317,7 +317,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         kafkaFutures = new LinkedList<Future<RecordMetadata>>();
 
-        String registryUrl  = context.getString(SCHEMA_REGISTRY_URL);
+        String registryUrl  = context.getString(KafkaSinkConstants.SCHEMA_REGISTRY_URL);
         String bootStrapServers = context.getString(BOOTSTRAP_SERVERS_CONFIG);
 
         if (bootStrapServers == null || bootStrapServers.isEmpty()) {
