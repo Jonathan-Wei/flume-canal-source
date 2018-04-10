@@ -109,11 +109,11 @@ public class EntryConverter {
                     String keyName = getTableKeyName(entry.getHeader());
                     String topic = canalConf.getTableTopic(keyName);
 
-                    LOGGER.debug("rowData rowData:", rowData);
+                    LOGGER.debug("rowData rowData:{}", rowData.toString());
                     // 处理行数据
                     Map<String, String> eventData = handleRowData(rowData, entry.getHeader(),
                             eventType);
-                    LOGGER.debug("eventData handleRowData:", eventData);
+                    LOGGER.debug("eventData handleRowData:{}", eventData.values());
                     // 监控表数据
                     tableCounter.incrementTableReceivedCount(keyName);
 
@@ -230,6 +230,7 @@ public class EntryConverter {
             eventMap.put("old", beforeRowMap);
         }
         */
+        LOGGER.debug("rowDataMap: {}", rowDataMap);
         eventMap.put("__table", entryHeader.getTableName());
         eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
         eventMap.put("__db", entryHeader.getSchemaName());
