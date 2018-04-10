@@ -55,8 +55,15 @@ public class CanalConf {
     // topic -> schema fields list
     private Map<String, List<String>> topicToSchemaFields = Maps.newHashMap();
     // topic,schema_field -> table_field
-    private Table<String, String, String> tableFieldsFilter = HashBasedTable.create();
+    private Table<String, String, String> topicSchemaFieldToTableField = HashBasedTable.create();
 
+    public Map<String, String> getTopicToSchemaMap() {
+        return topicToSchemaMap;
+    }
+
+    public Map<String, List<String>> getTopicToSchemaFields() {
+        return topicToSchemaFields;
+    }
 
     public String getIpInterface() {
         return ipInterface;
@@ -132,7 +139,7 @@ public class CanalConf {
                             "tableFieldsFilter 格式错误 eg: id|id1,name|name1;uid|uid2,name|name2");
 
                     schemaFields.add(fieldTableSchema[1]);
-                    this.tableFieldsFilter.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
+                    this.topicSchemaFieldToTableField.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
                 }
 
                 topicToSchemaFields.put(topic, schemaFields);
@@ -169,8 +176,8 @@ public class CanalConf {
             return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
     }
 
-    public Table<String, String, String> getTableFieldsFilter() {
-        return this.tableFieldsFilter;
+    public Table<String, String, String> getTopicSchemaFieldToTableField() {
+        return this.topicSchemaFieldToTableField;
     }
 
     public String getZkServers() {

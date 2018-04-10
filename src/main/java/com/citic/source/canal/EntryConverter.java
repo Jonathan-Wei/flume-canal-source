@@ -19,10 +19,17 @@ package com.citic.source.canal;
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
@@ -98,17 +105,21 @@ public class EntryConverter {
                 events.add(getSqlEvent(entry, entrySql));
 
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
+
+                    String keyName = getTableKeyName(entry.getHeader());
+                    String topic = canalConf.getTableTopic(keyName);
+
                     // 处理行数据
-                    Map<String, Object> eventData = handleRowData(rowData, entry.getHeader(),
-                            eventType.toString());
+                    Map<String, String> eventData = handleRowData(rowData, entry.getHeader(),
+                            eventType);
                     // 监控表数据
-                    tableCounter.incrementTableReceivedCount(getTableKeyName(entry.getHeader()));
+                    tableCounter.incrementTableReceivedCount(keyName);
 
                     String pk = getPK(rowData);
                     // 处理 event Header
                     LOGGER.debug("RowData pk:{}", pk);
-                    Map<String, String> header = handleRowDataHeader(entry.getHeader(), pk);
-                    events.add(dataToEvent(eventData, header));
+                    Map<String, String> header = handleRowDataHeader(topic, pk);
+                    events.add(dataToAvroEvent(eventData, header, topic));
                     numberInTransaction++;
                 }
             }
@@ -124,14 +135,62 @@ public class EntryConverter {
         Map<String, Object> eventSql = handleSQL(sql, entry.getHeader());
         Map<String, String> sqlHeader = Maps.newHashMap();
         sqlHeader.put("topic", "sql");
-        return dataToEvent(eventSql, sqlHeader);
+        return dataToJSONEvent(eventSql, sqlHeader);
     }
 
     /*
-    * 将 data, header 转换为 Event 格式
+    * 将 data, header 转换为 JSON Event 格式
     * */
-    private Event dataToEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
+    private Event dataToJSONEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
         byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+        return EventBuilder.withBody(eventBody,eventHeader);
+    }
+
+
+    private  String getTableFieldSchema(List<String> schemaFieldList, String schemaName) {
+
+        List<String> resultList = Lists.newArrayList();
+
+        String schema = "{"
+                + "\"type\":\"record\","
+                + "\"name\":\""+ schemaName +"\","
+                + "\"fields\":[";
+
+        for (String fieldStr: schemaFieldList) {
+            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
+            resultList.add(field);
+        }
+        schema += Joiner.on(",").join(resultList);
+        schema += "]}";
+        return schema;
+    }
+
+    /*
+    * 将 data, header 转换为 Avro Event 格式
+    * */
+    private Event dataToAvroEvent(Map<String, String> eventData,
+                                  Map<String, String> eventHeader, String topic) {
+
+        List<String> schemaFieldList = this.canalConf.getTopicToSchemaFields().get(topic);
+        String schemaName = this.canalConf.getTopicToSchemaMap().get(topic);
+
+        List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__type", "__agent", "__from");
+        schemaFieldList.addAll(attrList);
+
+        Schema.Parser parser = new Schema.Parser();
+        Schema schema = parser.parse(getTableFieldSchema(schemaFieldList, schemaName));
+        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+
+
+        GenericData.Record avroRecord = new GenericData.Record(schema);
+
+        for (String fieldStr: schemaFieldList) {
+            String tableField = this.canalConf.getTopicSchemaFieldToTableField().get(topic, fieldStr);
+
+            avroRecord.put(fieldStr, eventData.get(tableField));
+        }
+
+        byte[] eventBody = recordInjection.apply(avroRecord);
         return EventBuilder.withBody(eventBody,eventHeader);
     }
 
@@ -152,21 +211,27 @@ public class EntryConverter {
     /*
     * 处理行数据，并添加其他字段信息
     * */
-    private Map<String, Object> handleRowData(CanalEntry.RowData rowData,
-                                       CanalEntry.Header entryHeader, String eventType) {
-        Map<String, Object> eventMap = Maps.newHashMap();
-        Map<String, Object> rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
+    private Map<String, String> handleRowData(CanalEntry.RowData rowData,
+                                       CanalEntry.Header entryHeader, CanalEntry.EventType eventType) {
+        Map<String, String> eventMap = Maps.newHashMap();
+        Map<String, String> rowDataMap;
+
+        if (eventType == CanalEntry.EventType.DELETE) {
+            // 删除事件 getAfterColumnsList 数据为空
+            rowDataMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader);
+        } else {
+            rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
+        }
         /* 之前的数据
         if (canalConf.getOldDataRequired()) {
             Map<String, Object> beforeRowMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader);
             eventMap.put("old", beforeRowMap);
         }
         */
-
         eventMap.put("__table", entryHeader.getTableName());
         eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
         eventMap.put("__db", entryHeader.getSchemaName());
-        eventMap.put("__type", eventType);
+        eventMap.put("__type", eventType.toString());
         eventMap.put("__agent", IPAddress);
         eventMap.put("__from", fromDBIP);
         eventMap.putAll(rowDataMap);
@@ -200,9 +265,7 @@ public class EntryConverter {
     /*
     * 处理 Event Header 获取数据的 topic
     * */
-    private Map<String, String> handleRowDataHeader(CanalEntry.Header entryHeader, String kafkaKey) {
-        String keyName = getTableKeyName(entryHeader);
-        String topic = canalConf.getTableTopic(keyName);
+    private Map<String, String> handleRowDataHeader(String topic, String kafkaKey) {
 
         Map<String, String> header = Maps.newHashMap();
         if (kafkaKey != null){
@@ -217,14 +280,14 @@ public class EntryConverter {
     /*
     * 对列数据进行解析
     * */
-    private Map<String, Object> convertColumnListToMap(List<CanalEntry.Column> columns, CanalEntry.Header entryHeader) {
-        Map<String, Object> rowMap = Maps.newHashMap();
+    private Map<String, String> convertColumnListToMap(List<CanalEntry.Column> columns, CanalEntry.Header entryHeader) {
+        Map<String, String> rowMap = Maps.newHashMap();
 
         String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
         for(CanalEntry.Column column : columns) {
             int sqlType = column.getSqlType();
             String stringValue = column.getValue();
-            Object colValue;
+            String colValue;
 
             try {
                 switch (sqlType) {

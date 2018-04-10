@@ -28,8 +28,6 @@ public class CanalSourceConstants {
     public static final String PASSWORD = "password";
     public static final String BATCH_SIZE = "batchSize";
 
-    public static final String TABLE_FILTER = "tableFilter";
-
     public static final String OLD_DATA_REQUIRED = "oldDataRequired";
 
     public static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";

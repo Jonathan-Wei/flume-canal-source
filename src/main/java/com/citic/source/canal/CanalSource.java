@@ -68,7 +68,6 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
 
         canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
-        LOGGER.debug("table_fields_table: {}",  canalConf.getTableFieldsFilter());
     }
 
     @Override
