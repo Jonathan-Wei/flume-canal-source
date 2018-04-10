@@ -136,7 +136,7 @@ public class EntryConverter {
     * 获取 sql topic Event数据
     * */
     private Event getSqlEvent(CanalEntry.Entry entry, String sql) {
-        Map<String, Object> eventSql = handleSQL(sql, entry.getHeader());
+        Map<String, String> eventSql = handleSQL(sql, entry.getHeader());
         Map<String, String> sqlHeader = Maps.newHashMap();
         sqlHeader.put("topic", "sql");
         return dataToAvroSQLEvent(eventSql, sqlHeader);
@@ -145,7 +145,7 @@ public class EntryConverter {
     /*
     * 将 data, header 转换为 JSON Event 格式
     * */
-    private Event dataToAvroSQLEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
+    private Event dataToAvroSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
 
         List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__sql", "__agent", "__from");
 
@@ -224,10 +224,10 @@ public class EntryConverter {
     /*
     * 处理 sql topic 的数据格式
     * */
-    private Map<String, Object> handleSQL(String sql, CanalEntry.Header entryHeader) {
-        Map<String, Object> eventMap = Maps.newHashMap();
+    private Map<String, String> handleSQL(String sql, CanalEntry.Header entryHeader) {
+        Map<String, String > eventMap = Maps.newHashMap();
         eventMap.put("__table", entryHeader.getTableName());
-        eventMap.put("__ts", Math.round(entryHeader.getExecuteTime() / 1000));
+        eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
         eventMap.put("__db", entryHeader.getSchemaName());
         eventMap.put("__sql", sql);
         eventMap.put("__agent", IPAddress);
