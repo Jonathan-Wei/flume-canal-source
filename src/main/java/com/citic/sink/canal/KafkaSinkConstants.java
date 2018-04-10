@@ -15,6 +15,7 @@ public class KafkaSinkConstants {
             KAFKA_PREFIX + CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 
     public static final String KEY_HEADER = "key";
+    public static final String SCHEMA_HEADER = "schema";
     public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = "topic";
     public static final String TOPIC_OVERRIDE_HEADER = "topicHeader";
     public static final String ALLOW_TOPIC_OVERRIDE_HEADER = "allowTopicOverride";
@@ -27,9 +28,9 @@ public class KafkaSinkConstants {
     public static final String STATIC_PARTITION_CONF = "defaultPartitionId";
 
     public static final String DEFAULT_KEY_SERIALIZER =
-            "org.apache.kafka.common.serialization.StringSerializer";
+            "io.confluent.kafka.serializers.KafkaAvroSerializer";
     public static final String DEFAULT_VALUE_SERIAIZER =
-            "org.apache.kafka.common.serialization.ByteArraySerializer";
+            "io.confluent.kafka.serializers.KafkaAvroSerializer";
 
     public static final int DEFAULT_BATCH_SIZE = 100;
     public static final String DEFAULT_TOPIC = "default-flume-topic";

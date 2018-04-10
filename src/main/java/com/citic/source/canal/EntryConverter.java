@@ -56,6 +56,7 @@ public class EntryConverter {
     private String IPAddress;
     private String fromDBIP;
     private String entrySql;
+    private Schema.Parser parser;
 
 
 
@@ -64,6 +65,8 @@ public class EntryConverter {
         this.tableCounter = tableCounter;
         IPAddress = Utility.getLocalIP(canalConf.getIpInterface());
         fromDBIP = canalConf.getFromDBIP();
+
+        parser = new Schema.Parser();
     }
 
 
@@ -136,15 +139,34 @@ public class EntryConverter {
         Map<String, Object> eventSql = handleSQL(sql, entry.getHeader());
         Map<String, String> sqlHeader = Maps.newHashMap();
         sqlHeader.put("topic", "sql");
-        return dataToJSONEvent(eventSql, sqlHeader);
+        return dataToAvroSQLEvent(eventSql, sqlHeader);
     }
 
     /*
     * 将 data, header 转换为 JSON Event 格式
     * */
-    private Event dataToJSONEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
-        byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+    private Event dataToAvroSQLEvent(Map<String, Object> eventData, Map<String, String> eventHeader) {
+
+        List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__sql", "__agent", "__from");
+
+        String schemaName = "sql";
+
+        String schemaString = getTableFieldSchema(attrList, schemaName);
+        Schema schema = this.parser.parse(schemaString);
+        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+
+        GenericRecord avroRecord = new GenericData.Record(schema);
+
+        for (String fieldStr: attrList) {
+            avroRecord.put(fieldStr, eventData.get(fieldStr));
+        }
+
+        byte[] eventBody = recordInjection.apply(avroRecord);
+
+        // 用于sink解析
+        eventHeader.put("schema", schemaString);
         return EventBuilder.withBody(eventBody,eventHeader);
+
     }
 
 
@@ -177,14 +199,11 @@ public class EntryConverter {
 
         String schemaName = this.canalConf.getTopicToSchemaMap().get(topic);
 
-        Schema.Parser parser = new Schema.Parser();
-
         String schemaString = getTableFieldSchema(ListUtils.union(schemaFieldList, attrList), schemaName);
-        Schema schema = parser.parse(schemaString);
+        Schema schema = this.parser.parse(schemaString);
 
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-        
-        GenericData.Record avroRecord = new GenericData.Record(schema);
+        GenericRecord avroRecord = new GenericData.Record(schema);
 
         for (String fieldStr: schemaFieldList) {
             String tableField = this.canalConf.getTopicSchemaFieldToTableField().get(topic, fieldStr);
@@ -196,6 +215,9 @@ public class EntryConverter {
         }
 
         byte[] eventBody = recordInjection.apply(avroRecord);
+
+        // 用于sink解析
+        eventHeader.put("schema", schemaString);
         return EventBuilder.withBody(eventBody,eventHeader);
     }
 
@@ -204,12 +226,12 @@ public class EntryConverter {
     * */
     private Map<String, Object> handleSQL(String sql, CanalEntry.Header entryHeader) {
         Map<String, Object> eventMap = Maps.newHashMap();
-        eventMap.put("table", entryHeader.getTableName());
-        eventMap.put("ts", Math.round(entryHeader.getExecuteTime() / 1000));
-        eventMap.put("db", entryHeader.getSchemaName());
-        eventMap.put("sql", sql);
-        eventMap.put("agent", IPAddress);
-        eventMap.put("from", fromDBIP);
+        eventMap.put("__table", entryHeader.getTableName());
+        eventMap.put("__ts", Math.round(entryHeader.getExecuteTime() / 1000));
+        eventMap.put("__db", entryHeader.getSchemaName());
+        eventMap.put("__sql", sql);
+        eventMap.put("__agent", IPAddress);
+        eventMap.put("__from", fromDBIP);
         return eventMap;
     }
 

@@ -24,6 +24,13 @@ limitations under the License.
     <artifactId>tagent-canal-source</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>http://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
     <parent>
         <artifactId>flume-ng-sources</artifactId>
         <groupId>org.apache.flume</groupId>
@@ -116,6 +123,7 @@ limitations under the License.
         </dependency>
 
         <!--new need copy to libext-->
+
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
@@ -126,6 +134,12 @@ limitations under the License.
             <version>0.9.2</version>
         </dependency>
 
+
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>3.3.0</version>
+        </dependency>
 
 
     </dependencies>

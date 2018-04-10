@@ -1,12 +1,18 @@
 package com.citic.sink.canal;
 
 
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
+import org.apache.commons.collections.ListUtils;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -76,7 +82,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private static final Logger logger = LoggerFactory.getLogger(KafkaSink.class);
 
     private final Properties kafkaProps = new Properties();
-    private KafkaProducer<String, byte[]> producer;
+    private KafkaProducer<Object, Object> producer;
 
     private String topic;
     private int batchSize;
@@ -140,7 +146,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     break;
                 }
 
-                byte[] eventBody = event.getBody();
+                Object eventBody = event.getBody();
                 Map<String, String> headers = event.getHeaders();
 
                 if (allowTopicOverride) {
@@ -160,7 +166,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 if (logger.isTraceEnabled()) {
                     if (LogPrivacyUtil.allowLogRawData()) {
                         logger.trace("{Event} " + eventTopic + " : " + eventKey + " : "
-                                + new String(eventBody, "UTF-8"));
+                                + eventBody);
                     } else {
                         logger.trace("{Event} " + eventTopic + " : " + eventKey);
                     }
@@ -172,7 +178,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
                 Integer partitionId = null;
                 try {
-                    ProducerRecord<String, byte[]> record;
+                    ProducerRecord<Object, Object> record;
                     if (staticPartitionId != null) {
                         partitionId = staticPartitionId;
                     }
@@ -184,11 +190,11 @@ public class KafkaSink extends AbstractSink implements Configurable {
                         }
                     }
                     if (partitionId != null) {
-                        record = new ProducerRecord<String, byte[]>(eventTopic, partitionId, eventKey,
-                                serializeEvent(event, useAvroEventFormat));
+                        record = new ProducerRecord<Object, Object>(eventTopic, partitionId, eventKey,
+                                serializeEvent(event, headers.get(SCHEMA_HEADER)));
                     } else {
-                        record = new ProducerRecord<String, byte[]>(eventTopic, eventKey,
-                                serializeEvent(event, useAvroEventFormat));
+                        record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
+                                serializeEvent(event, headers.get(SCHEMA_HEADER)));
                     }
                     kafkaFutures.add(producer.send(record, new SinkCallback(startTime)));
                 } catch (NumberFormatException ex) {
@@ -243,7 +249,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     @Override
     public synchronized void start() {
         // instantiate the producer
-        producer = new KafkaProducer<String,byte[]>(kafkaProps);
+        producer = new KafkaProducer<Object, Object>(kafkaProps);
         counter.start();
         super.start();
     }
@@ -385,6 +391,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
         //Defaults overridden based on config
         kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
         kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIAIZER);
+
+
         kafkaProps.putAll(context.getSubProperties(KAFKA_PRODUCER_PREFIX));
         kafkaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootStrapServers);
     }
@@ -393,26 +401,16 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return kafkaProps;
     }
 
-    private byte[] serializeEvent(Event event, boolean useAvroEventFormat) throws IOException {
+    private Object serializeEvent(Event event, String schemaString) throws IOException {
         byte[] bytes;
-        if (useAvroEventFormat) {
-            if (!tempOutStream.isPresent()) {
-                tempOutStream = Optional.of(new ByteArrayOutputStream());
-            }
-            if (!writer.isPresent()) {
-                writer = Optional.of(new SpecificDatumWriter<AvroFlumeEvent>(AvroFlumeEvent.class));
-            }
-            tempOutStream.get().reset();
-            AvroFlumeEvent e = new AvroFlumeEvent(toCharSeqMap(event.getHeaders()),
-                    ByteBuffer.wrap(event.getBody()));
-            encoder = EncoderFactory.get().directBinaryEncoder(tempOutStream.get(), encoder);
-            writer.get().write(e, encoder);
-            encoder.flush();
-            bytes = tempOutStream.get().toByteArray();
-        } else {
-            bytes = event.getBody();
-        }
-        return bytes;
+        bytes = event.getBody();
+
+        Schema.Parser parser = new Schema.Parser();
+        Schema schema = parser.parse(schemaString);
+        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+        GenericRecord avroRecord = recordInjection.invert(bytes).get();
+
+        return avroRecord;
     }
 
     private static Map<CharSequence, CharSequence> toCharSeqMap(Map<String, String> stringMap) {
