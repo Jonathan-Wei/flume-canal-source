@@ -100,16 +100,18 @@ public class CanalConf {
                 counter[0] += 1;
 
                 List<String> schemaFields = Lists.newArrayList();
-                Iterable<String> fieldList =
-                        Splitter.on(",").omitEmptyStrings().trimResults().split(item);
+                Splitter.on(",")
+                    .omitEmptyStrings()
+                    .trimResults()
+                    .split(item)
+                    .forEach(field -> {
+                        String[] fieldTableSchema = field.split("\\|");
+                        Preconditions.checkArgument(fieldTableSchema.length == 2,
+                                "tableFieldsFilter 格式错误 eg: id|id1,name|name1;uid|uid2,name|name2");
+                        schemaFields.add(fieldTableSchema[1]);
+                        this.topicSchemaFieldToTableField.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
 
-                for (String field : fieldList) {
-                    String[] fieldTableSchema = field.split("\\|");
-                    Preconditions.checkArgument(fieldTableSchema.length == 2,
-                            "tableFieldsFilter 格式错误 eg: id|id1,name|name1;uid|uid2,name|name2");
-                    schemaFields.add(fieldTableSchema[1]);
-                    this.topicSchemaFieldToTableField.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
-                }
+                    });
                 topicToSchemaFields.put(topic, schemaFields);
             });
     }
