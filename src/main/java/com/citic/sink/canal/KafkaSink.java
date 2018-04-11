@@ -407,16 +407,14 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return kafkaProps;
     }
 
-    private Object serializeEvent(Event event, String schemaString) throws IOException {
+    private GenericRecord serializeEvent(Event event, String schemaString) throws IOException {
         byte[] bytes;
         bytes = event.getBody();
 
         Schema.Parser parser = new Schema.Parser();
         Schema schema = parser.parse(schemaString);
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-        GenericRecord avroRecord = recordInjection.invert(bytes).get();
-
-        return avroRecord;
+        return recordInjection.invert(bytes).get();
     }
 
     private static Map<CharSequence, CharSequence> toCharSeqMap(Map<String, String> stringMap) {

@@ -34,7 +34,6 @@ import static com.citic.source.canal.CanalSourceConstants.SOURCE_TABLES_COUNTER;
 
 public class CanalSource extends AbstractPollableSource
         implements Configurable {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalSource.class);
 
     private CanalClient canalClient = null;
@@ -49,9 +48,7 @@ public class CanalSource extends AbstractPollableSource
     * */
     private void setCanalConf(Context context) {
         canalConf.setIpInterface(context.getString(CanalSourceConstants.IP_INTERFACE));
-
         canalConf.setServerUrl(context.getString(CanalSourceConstants.SERVER_URL));
-
         canalConf.setServerUrls(context.getString(CanalSourceConstants.SERVER_URLS));
         canalConf.setZkServers(context.getString(CanalSourceConstants.ZOOKEEPER_SERVERS));
         canalConf.setDestination(context.getString(CanalSourceConstants.DESTINATION));
@@ -59,23 +56,16 @@ public class CanalSource extends AbstractPollableSource
                 CanalSourceConstants.DEFAULT_USERNAME));
         canalConf.setPassword(context.getString(CanalSourceConstants.PASSWORD,
                 CanalSourceConstants.DEFAULT_PASSWORD));
-
         canalConf.setBatchSize(context.getInteger(CanalSourceConstants.BATCH_SIZE,
                 CanalSourceConstants.DEFAULT_BATCH_SIZE));
-        canalConf.setOldDataRequired(context.getBoolean(CanalSourceConstants.OLD_DATA_REQUIRED,
-                CanalSourceConstants.DEFAULT_OLD_DATA_REQUIRED));
-
         canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
-
         canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
     }
 
     @Override
     protected void doConfigure(Context context) throws FlumeException {
         LOGGER.debug("configure...");
-
         setCanalConf(context);
-
         // CanalSourceConstants.TABLE_TO_TOPIC_MAP 配置不能为空
         if (canalConf.getTableToTopicMap() == null || canalConf.getTableToTopicMap().isEmpty()){
             throw new ConfigurationException(String.format("%s cannot be empty or null",
@@ -101,8 +91,6 @@ public class CanalSource extends AbstractPollableSource
     @Override
     protected void doStart() throws FlumeException {
         LOGGER.debug("start...");
-        LOGGER.info("Object name: {}", this.getClass().getName());
-
         try {
             this.canalClient = new CanalClient(canalConf);
             this.canalClient.start();
@@ -130,12 +118,10 @@ public class CanalSource extends AbstractPollableSource
             return Status.BACKOFF;
         }
 
-        if (message == null) {
+        if (message == null)
             return Status.BACKOFF;
-        }
 
         List<Event> eventsAll = Lists.newArrayList();
-
         for (CanalEntry.Entry entry : message.getEntries()) {
             List<Event> events = entryConverter.convert(entry);
             eventsAll.addAll(events);
@@ -165,10 +151,9 @@ public class CanalSource extends AbstractPollableSource
     protected void doStop() throws FlumeException {
         LOGGER.debug("stop...");
         this.canalClient.stop();
-
         sourceCounter.stop();
+
         LOGGER.info("" + "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
         tableCounter.stop();
     }
-
 }

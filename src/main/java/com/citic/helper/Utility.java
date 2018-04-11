@@ -1,5 +1,7 @@
 package com.citic.helper;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,6 +10,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
+import java.util.List;
 
 public class Utility {
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
@@ -37,5 +40,25 @@ public class Utility {
             }
         }
         return ip;
+    }
+
+
+    /*
+    * get schema String
+    * */
+    public static String getTableFieldSchema(List<String> schemaFieldList, String schemaName) {
+        List<String> resultList = Lists.newArrayList();
+        String schema = "{"
+                + "\"type\":\"record\","
+                + "\"name\":\""+ schemaName +"\","
+                + "\"fields\":[";
+
+        for (String fieldStr: schemaFieldList) {
+            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
+            resultList.add(field);
+        }
+        schema += Joiner.on(",").join(resultList);
+        schema += "]}";
+        return schema;
     }
 }

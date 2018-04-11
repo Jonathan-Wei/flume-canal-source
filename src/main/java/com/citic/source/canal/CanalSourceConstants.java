@@ -28,8 +28,6 @@ public class CanalSourceConstants {
     public static final String PASSWORD = "password";
     public static final String BATCH_SIZE = "batchSize";
 
-    public static final String OLD_DATA_REQUIRED = "oldDataRequired";
-
     public static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
     public static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
 
@@ -37,9 +35,15 @@ public class CanalSourceConstants {
     public static final int DEFAULT_BATCH_SIZE = 1024;
     public static final String DEFAULT_USERNAME = "";
     public static final String DEFAULT_PASSWORD = "";
-    public static final boolean DEFAULT_OLD_DATA_REQUIRED = true;
 
     public static final String SOURCE_TABLES_COUNTER = "SourceTables";
+
+
+    public static final String HEADER_TOPIC = "topic";
+    public static final String HEADER_SCHEMA = "schema";
+    public static final String HEADER_KEY = "key";
+
+
 
 
 

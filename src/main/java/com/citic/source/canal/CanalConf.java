@@ -17,6 +17,7 @@
 package com.citic.source.canal;
 
 import com.citic.helper.RegexHashMap;
+import com.citic.helper.Utility;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -32,8 +33,8 @@ import java.util.*;
 
 public class CanalConf {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
-
     private String ipInterface;
+    private String IPAddress;
     private String zkServers;
     private String destination;
     private String username;
@@ -41,7 +42,6 @@ public class CanalConf {
     private int batchSize;
     private String serverUrl;
     private String serverUrls;
-    private Boolean oldDataRequired;
 
     // topic list
     private List<String> topicAppendList = Lists.newArrayList();
@@ -51,34 +51,10 @@ public class CanalConf {
     // topic -> schema
     private Map<String, String> topicToSchemaMap = Maps.newHashMap();
 
-
     // topic -> schema fields list
     private Map<String, List<String>> topicToSchemaFields = Maps.newHashMap();
     // topic,schema_field -> table_field
     private Table<String, String, String> topicSchemaFieldToTableField = HashBasedTable.create();
-
-    public Map<String, String> getTopicToSchemaMap() {
-        return topicToSchemaMap;
-    }
-
-    public Map<String, List<String>> getTopicToSchemaFields() {
-        return topicToSchemaFields;
-    }
-
-    public String getIpInterface() {
-        return ipInterface;
-    }
-
-    public void setIpInterface(String ipInterface) {
-        this.ipInterface = ipInterface;
-    }
-
-
-    public String getFromDBIP() {
-        // destination example: 192_168_2_24-3306
-        return this.destination.replace("-", ":").replace("_", ".");
-    }
-
 
     /*
     * 设置表名和 topic 对应 map
@@ -106,11 +82,6 @@ public class CanalConf {
                 });
     }
 
-    public Map<String, String> getTableToTopicMap() {
-        return tableToTopicMap;
-    }
-
-
     /*
     * 设置表名与字段过滤对应 table
     * */
@@ -129,7 +100,6 @@ public class CanalConf {
                 counter[0] += 1;
 
                 List<String> schemaFields = Lists.newArrayList();
-
                 Iterable<String> fieldList =
                         Splitter.on(",").omitEmptyStrings().trimResults().split(item);
 
@@ -137,34 +107,17 @@ public class CanalConf {
                     String[] fieldTableSchema = field.split("\\|");
                     Preconditions.checkArgument(fieldTableSchema.length == 2,
                             "tableFieldsFilter 格式错误 eg: id|id1,name|name1;uid|uid2,name|name2");
-
                     schemaFields.add(fieldTableSchema[1]);
                     this.topicSchemaFieldToTableField.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
                 }
-
                 topicToSchemaFields.put(topic, schemaFields);
-
             });
-
     }
 
-    /*
-    * 判断表名，字段是否在过滤列表中
-    * */
-//    public boolean isFieldNeedOutput(String schemaTableName, String fieldName) {
-//        if (this.tableFieldsFilter != null) {
-//            /*
-//            * 这里的逻辑为,如果表没有配置字段过滤,则不对表做过滤,输出表的全部字段
-//            * 如果表配置了字段过滤,在只有配置中的字段会输出到最终结果
-//            * */
-//            return !this.tableFieldsFilter.containsRow(schemaTableName)
-//                    || this.tableFieldsFilter.containsColumn(fieldName);
-//        } else {
-//            return true;
-//        }
-//    }
-
-
+    public String getFromDBIP() {
+        // destination example: 192_168_2_24-3306
+        return this.destination.replace("-", ":").replace("_", ".");
+    }
 
     /*
     * 根据表名获取 topic
@@ -176,14 +129,6 @@ public class CanalConf {
             return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
     }
 
-    public Table<String, String, String> getTopicSchemaFieldToTableField() {
-        return this.topicSchemaFieldToTableField;
-    }
-
-    public String getZkServers() {
-        return zkServers;
-    }
-
     public void setZkServers(String zkServers) {
         if (Strings.isNullOrEmpty(zkServers)){
             throw new IllegalArgumentException("zkServers cannot empty");
@@ -191,15 +136,40 @@ public class CanalConf {
         this.zkServers = zkServers;
     }
 
-    public String getDestination() {
-        return destination;
-    }
-
     public void setDestination(String destination) {
         if (Strings.isNullOrEmpty(destination)){
             throw new IllegalArgumentException("destination cannot empty");
         }
         this.destination = destination;
+    }
+
+    public void setIpInterface(String ipInterface) {
+        this.ipInterface = ipInterface;
+        IPAddress = Utility.getLocalIP(this.ipInterface);
+    }
+
+    public Map<String, String> getTopicToSchemaMap() {
+        return topicToSchemaMap;
+    }
+
+    public Map<String, List<String>> getTopicToSchemaFields() {
+        return topicToSchemaFields;
+    }
+
+    public String getIPAddress() { return IPAddress; };
+
+    public Map<String, String> getTableToTopicMap() {
+        return tableToTopicMap;
+    }
+
+    public Table<String, String, String> getTopicSchemaFieldToTableField() { return this.topicSchemaFieldToTableField; }
+
+    public String getZkServers() {
+        return zkServers;
+    }
+
+    public String getDestination() {
+        return destination;
     }
 
     public String getUsername() {
@@ -218,9 +188,7 @@ public class CanalConf {
         this.password = password;
     }
 
-    public int getBatchSize() {
-        return batchSize;
-    }
+    public int getBatchSize() { return batchSize; }
 
     public void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
@@ -249,15 +217,6 @@ public class CanalConf {
         return Joiner.on(",").join(filterTableList);
     }
 
-
-    public Boolean getOldDataRequired() {
-        return oldDataRequired;
-    }
-
-    public void setOldDataRequired(Boolean oldDataRequired) {
-        this.oldDataRequired = oldDataRequired;
-    }
-
     public boolean isConnectionUrlValid() {
         if (Strings.isNullOrEmpty(this.zkServers)
                 && Strings.isNullOrEmpty(this.serverUrl)
@@ -268,16 +227,17 @@ public class CanalConf {
         }
     }
 
-    public static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws ServerUrlsFormatException {
+    public static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws
+            ServerUrlsFormatException {
         List<SocketAddress> addresses = new ArrayList<>();
-
         if (StringUtils.isNotEmpty(serverUrls)) {
             for (String serverUrl : serverUrls.split(",")) {
                 if (StringUtils.isNotEmpty(serverUrl)) {
                     try {
                         addresses.add(convertUrlToSocketAddress(serverUrl));
                     } catch (Exception exception) {
-                        throw new ServerUrlsFormatException(String.format("The serverUrls are malformed . The ServerUrls : \"%s\" .", serverUrls), exception);
+                        throw new ServerUrlsFormatException(String.format("The serverUrls are malformed. " +
+                                "The ServerUrls : \"%s\" .", serverUrls), exception);
                     }
                 }
             }
@@ -287,9 +247,9 @@ public class CanalConf {
         }
     }
 
-    public static SocketAddress convertUrlToSocketAddress(String serverUrl) throws ServerUrlsFormatException, NumberFormatException {
+    public static SocketAddress convertUrlToSocketAddress(String serverUrl) throws ServerUrlsFormatException,
+            NumberFormatException {
         String[] hostAndPort = serverUrl.split(":");
-
         if (hostAndPort.length == 2 && StringUtils.isNotEmpty(hostAndPort[1])) {
             try {
                 int port  = Integer.parseInt(hostAndPort[1]);
@@ -300,7 +260,8 @@ public class CanalConf {
                 throw exception;
             }
         } else {
-            throw new ServerUrlsFormatException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .", serverUrl));
+            throw new ServerUrlsFormatException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
+                    serverUrl));
         }
     }
 }
