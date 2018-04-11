@@ -33,7 +33,6 @@ import java.util.*;
 
 public class CanalConf {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
-    private String ipInterface;
     private String IPAddress;
     private String zkServers;
     private String destination;
@@ -71,7 +70,7 @@ public class CanalConf {
                 .forEach(item ->{
                     String[] result =  item.split(":");
                     Preconditions.checkArgument(result.length == 3,
-                            "tableToTopicMap format incorrect eg:db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
+                            "tableToTopicMap format incorrect eg: db.tbl1:topic1:schema1");
                     filterTableList.add(result[0].trim());
                     topicAppendList.add(result[1].trim());
 
@@ -107,7 +106,7 @@ public class CanalConf {
                     .forEach(field -> {
                         String[] fieldTableSchema = field.split("\\|");
                         Preconditions.checkArgument(fieldTableSchema.length == 2,
-                                "tableFieldsFilter 格式错误 eg: id|id1,name|name1;uid|uid2,name|name2");
+                                "tableFieldsFilter 格式错误 eg: id|id1,name|name1");
                         schemaFields.add(fieldTableSchema[1]);
                         this.topicSchemaFieldToTableField.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
 
@@ -146,8 +145,7 @@ public class CanalConf {
     }
 
     public void setIpInterface(String ipInterface) {
-        this.ipInterface = ipInterface;
-        IPAddress = Utility.getLocalIP(this.ipInterface);
+        IPAddress = Utility.getLocalIP(ipInterface);
     }
 
     public Map<String, String> getTopicToSchemaMap() {
