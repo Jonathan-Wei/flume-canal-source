@@ -31,7 +31,6 @@ public class EntryConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
     private CanalConf canalConf;
     private SourceCounter tableCounter;
-    private String entrySql;
 
     public EntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
         this.canalConf = canalConf;
@@ -67,13 +66,11 @@ public class EntryConverter {
 
             // canal 在 QUERY 事件没有做表过滤
             if (eventType == CanalEntry.EventType.QUERY) {
-                entrySql = rowChange.getSql();
+                // do nothing
             } else if (rowChange.getIsDdl()) {
+                // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
                 events.add(EntrySQLHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
             } else {
-                // 在每执行一次数据库数据更新操作前都会执行一次 QUERY 操作获取操作的sql语句
-                events.add(EntrySQLHandler.getSqlEvent(eventHeader, entrySql, canalConf));
-
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
                     Event dataEvent = EntryDataHandler.getDataEvent(rowData, eventHeader,
                             eventType, canalConf, tableCounter);
