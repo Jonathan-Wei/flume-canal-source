@@ -454,14 +454,13 @@ class SinkCallback implements Callback {
     public void onCompletion(RecordMetadata metadata, Exception exception) {
         if (exception != null) {
             logger.debug("Error sending message to Kafka {} ", exception.getMessage());
-        }
 
-        try {
-            String jsonString = Utility.avroToJson(this.record);
-
-            Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
-        } catch (IOException e) {
-            logger.debug("Error write message to error file {} ", e.getMessage());
+            try {
+                String jsonString = Utility.avroToJson(this.record);
+                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
+            } catch (IOException e) {
+                logger.debug("Error write message to error file {} ", e.getMessage());
+            }
         }
 
         if (logger.isDebugEnabled()) {
