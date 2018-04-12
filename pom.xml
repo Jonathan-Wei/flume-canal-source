@@ -134,7 +134,6 @@ limitations under the License.
             <version>0.9.2</version>
         </dependency>
 
-
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-avro-serializer</artifactId>

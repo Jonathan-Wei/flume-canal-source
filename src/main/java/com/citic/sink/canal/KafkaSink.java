@@ -1,9 +1,12 @@
 package com.citic.sink.canal;
 
 
+import com.citic.helper.Utility;
+import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.io.Files;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
@@ -34,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -93,6 +97,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private Integer staticPartitionId = null;
     private boolean allowTopicOverride;
     private String topicHeader = null;
+    private File kafkaSendErrorFile ;
 
 
     private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
@@ -179,6 +184,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
                 Integer partitionId = null;
                 try {
+                    GenericRecord avroRecord = serializeEvent(event, headers.get(SCHEMA_HEADER));
+
                     ProducerRecord<Object, Object> record;
                     if (staticPartitionId != null) {
                         partitionId = staticPartitionId;
@@ -192,12 +199,12 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     }
                     if (partitionId != null) {
                         record = new ProducerRecord<Object, Object>(eventTopic, partitionId, eventKey,
-                                serializeEvent(event, headers.get(SCHEMA_HEADER)));
+                                avroRecord);
                     } else {
                         record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
-                                serializeEvent(event, headers.get(SCHEMA_HEADER)));
+                                avroRecord);
                     }
-                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime)));
+                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, avroRecord, kafkaSendErrorFile)));
                 } catch (NumberFormatException ex) {
                     throw new EventDeliveryException("Non integer partition id specified", ex);
                 } catch (Exception ex) {
@@ -333,6 +340,11 @@ public class KafkaSink extends AbstractSink implements Configurable {
         if (counter == null) {
             counter = new KafkaSinkCounter(getName());
         }
+
+        if (kafkaSendErrorFile == null) {
+            String fileName = context.getString(KafkaSinkConstants.SEND_ERROR_FILE);
+            kafkaSendErrorFile = new File(fileName);
+        }
     }
 
     private void translateOldProps(Context ctx) {
@@ -430,14 +442,26 @@ public class KafkaSink extends AbstractSink implements Configurable {
 class SinkCallback implements Callback {
     private static final Logger logger = LoggerFactory.getLogger(SinkCallback.class);
     private long startTime;
+    private GenericRecord record;
+    private File kafkaSendErrorFile;
 
-    public SinkCallback(long startTime) {
+    public SinkCallback(long startTime, GenericRecord record, File kafkaSendErrorFile) {
+        this.record = record;
         this.startTime = startTime;
+        this.kafkaSendErrorFile = kafkaSendErrorFile;
     }
 
     public void onCompletion(RecordMetadata metadata, Exception exception) {
         if (exception != null) {
             logger.debug("Error sending message to Kafka {} ", exception.getMessage());
+        }
+
+        try {
+            String jsonString = Utility.avroToJson(this.record);
+
+            Files.write(jsonString, kafkaSendErrorFile, Charsets.UTF_8);
+        } catch (IOException e) {
+            logger.debug("Error write message to error file {} ", exception.getMessage());
         }
 
         if (logger.isDebugEnabled()) {
