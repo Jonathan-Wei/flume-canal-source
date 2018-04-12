@@ -459,9 +459,9 @@ class SinkCallback implements Callback {
         try {
             String jsonString = Utility.avroToJson(this.record);
 
-            Files.write(jsonString, kafkaSendErrorFile, Charsets.UTF_8);
+            Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
         } catch (IOException e) {
-            logger.debug("Error write message to error file {} ", exception.getMessage());
+            logger.debug("Error write message to error file {} ", e.getMessage());
         }
 
         if (logger.isDebugEnabled()) {
