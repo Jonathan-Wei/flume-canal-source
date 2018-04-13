@@ -39,6 +39,8 @@ public class CanalSource extends AbstractPollableSource
     private CanalClient canalClient = null;
     private CanalConf canalConf = new CanalConf();
 
+    private final List<Event> eventsAll = Lists.newArrayList();
+
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private SourceCounter tableCounter;
     private EntryConverter entryConverter;
@@ -121,7 +123,7 @@ public class CanalSource extends AbstractPollableSource
         if (message == null)
             return Status.BACKOFF;
 
-        List<Event> eventsAll = Lists.newArrayList();
+
         for (CanalEntry.Entry entry : message.getEntries()) {
             List<Event> events = entryConverter.convert(entry);
             eventsAll.addAll(events);
@@ -136,6 +138,8 @@ public class CanalSource extends AbstractPollableSource
             this.canalClient.rollback(message.getId());
             LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
                     e.getMessage(), e);
+            
+            eventsAll.clear();
             return Status.BACKOFF;
         }
 
@@ -143,6 +147,7 @@ public class CanalSource extends AbstractPollableSource
         sourceCounter.addToEventAcceptedCount(eventsAll.size());
         sourceCounter.incrementAppendBatchAcceptedCount();
 
+        eventsAll.clear();
         LOGGER.debug("Canal ack ok, batch id is {}", message.getId());
         return Status.READY;
     }
