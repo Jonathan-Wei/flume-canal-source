@@ -6,6 +6,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
@@ -98,6 +99,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private boolean allowTopicOverride;
     private String topicHeader = null;
     private File kafkaSendErrorFile ;
+    private Map<String, Schema> schemaCache = Maps.newHashMap() ;
 
 
     private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
@@ -422,9 +424,16 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private GenericRecord serializeEvent(Event event, String schemaString) throws IOException {
         byte[] bytes;
         bytes = event.getBody();
-
         Schema.Parser parser = new Schema.Parser();
-        Schema schema = parser.parse(schemaString);
+
+        Schema schema;
+        if (schemaCache.containsKey(schemaString)) {
+            schema = schemaCache.get(schemaString);
+        } else {
+            schema  = parser.parse(schemaString);
+            schemaCache.put(schemaString, schema);
+        }
+
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
         return recordInjection.invert(bytes).get();
     }
