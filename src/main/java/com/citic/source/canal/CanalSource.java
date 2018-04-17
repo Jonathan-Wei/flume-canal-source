@@ -27,7 +27,6 @@ import org.apache.flume.source.AbstractPollableSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static com.citic.source.canal.CanalSourceConstants.SOURCE_TABLES_COUNTER;
@@ -43,7 +42,6 @@ public class CanalSource extends AbstractPollableSource
 
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private SourceCounter tableCounter;
-    private EntryConverter entryConverter;
 
     /*
     * 获取配置
@@ -104,8 +102,6 @@ public class CanalSource extends AbstractPollableSource
 
         sourceCounter.start();
         tableCounter.start();
-
-        entryConverter = new EntryConverter(canalConf, tableCounter);
     }
 
     @Override
@@ -123,9 +119,8 @@ public class CanalSource extends AbstractPollableSource
         if (message == null)
             return Status.BACKOFF;
 
-
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = entryConverter.convert(entry);
+            List<Event> events = EntryConverter.convert(entry, canalConf, tableCounter);
             eventsAll.addAll(events);
         }
 

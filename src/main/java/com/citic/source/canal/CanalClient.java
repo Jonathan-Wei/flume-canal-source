@@ -27,14 +27,13 @@ import org.slf4j.LoggerFactory;
 import java.net.SocketAddress;
 import java.util.List;
 
-public class CanalClient {
-
+class CanalClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalClient.class);
+    private final CanalConf canalConf;
 
     private CanalConnector canalConnector;
-    private CanalConf canalConf;
 
-    public CanalClient(CanalConf canalConf) throws ServerUrlsFormatException {
+    CanalClient(CanalConf canalConf) throws ServerUrlsFormatException {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
             this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),
@@ -52,16 +51,12 @@ public class CanalClient {
         }
     }
 
-    public void start() {
+    void start() {
         this.canalConnector.connect();
         this.canalConnector.subscribe(canalConf.getTableFilter());
     }
 
-    public Message fetchRows() {
-        return fetchRows(this.canalConf.getBatchSize());
-    }
-
-    public Message fetchRows(int batchSize) {
+    Message fetchRows(int batchSize) {
         Message message = this.canalConnector.getWithoutAck(batchSize);
 
         long batchId = message.getId();
@@ -74,15 +69,15 @@ public class CanalClient {
         }
     }
 
-    public void ack(long batchId) {
+    void ack(long batchId) {
         this.canalConnector.ack(batchId);
     }
 
-    public void rollback(long batchId) {
+    void rollback(long batchId) {
         this.canalConnector.rollback(batchId);
     }
 
-    public void stop() {
+    void stop() {
         this.canalConnector.disconnect();
     }
 

@@ -1,7 +1,6 @@
 package com.citic.instrumentation;
 
 import com.citic.helper.RegexHashMap;
-import com.citic.source.canal.CanalConf;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import org.apache.flume.instrumentation.MonitoredCounterGroup;

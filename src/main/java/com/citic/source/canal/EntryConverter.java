@@ -27,18 +27,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class EntryConverter {
+class EntryConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
-    private CanalConf canalConf;
-    private SourceCounter tableCounter;
 
-    public EntryConverter(CanalConf canalConf, SourceCounter tableCounter) {
-        this.canalConf = canalConf;
-        this.tableCounter = tableCounter;
-    }
-
-    public List<Event> convert(CanalEntry.Entry entry) {
+    static List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf, SourceCounter tableCounter) {
         List<Event> events = new ArrayList<>();
+        /*
+        * TODO: 事务相关,暂不做处理
+        * */
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
                 || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
 

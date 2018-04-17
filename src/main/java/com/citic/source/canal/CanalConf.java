@@ -31,7 +31,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
 
-public class CanalConf {
+class CanalConf {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
     private String IPAddress;
     private String zkServers;
@@ -58,7 +58,7 @@ public class CanalConf {
     /*
     * 设置表名和 topic 对应 map
     * */
-    public void setTableToTopicMap(String tableToTopicMap) {
+    void setTableToTopicMap(String tableToTopicMap) {
         Preconditions.checkArgument(Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
         // test.test:test123:schema1;test.test1:test234:schema2
         Splitter.on(';')
@@ -90,7 +90,7 @@ public class CanalConf {
     /*
     * 设置表名与字段过滤对应 table
     * */
-    public void setTableFieldsFilter(String tableFieldsFilter) {
+    void setTableFieldsFilter(String tableFieldsFilter) {
         if (Strings.isNullOrEmpty(tableFieldsFilter))
             return;
         // 这里表的顺序根据配置文件中 tableToTopicMap 表的顺序
@@ -127,7 +127,7 @@ public class CanalConf {
             });
     }
 
-    public String getFromDBIP() {
+    String getFromDBIP() {
         // destination example: 192_168_2_24-3306
         return this.destination.replace("-", ":").replace("_", ".");
     }
@@ -135,111 +135,73 @@ public class CanalConf {
     /*
     * 根据表名获取 topic
     * */
-    public String getTableTopic(String schemaTableName) {
+    String getTableTopic(String schemaTableName) {
         if (this.tableToTopicMap != null)
             return this.tableToTopicMap.getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
         else
             return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
     }
 
-    public void setZkServers(String zkServers) {
-        if (Strings.isNullOrEmpty(zkServers)){
-            throw new IllegalArgumentException("zkServers cannot empty");
-        }
+    void setZkServers(String zkServers) {
+        Preconditions.checkArgument(Strings.isNullOrEmpty(zkServers), "zkServers cannot empty");
         this.zkServers = zkServers;
     }
 
-    public void setDestination(String destination) {
-        if (Strings.isNullOrEmpty(destination)){
-            throw new IllegalArgumentException("destination cannot empty");
-        }
+    void setDestination(String destination) {
+        Preconditions.checkArgument(Strings.isNullOrEmpty(destination), "destination cannot empty");
         this.destination = destination;
     }
 
-    public void setIpInterface(String ipInterface) {
-        IPAddress = Utility.getLocalIP(ipInterface);
-    }
+    Map<String, String> getTopicToSchemaMap() { return topicToSchemaMap; }
 
-    public Map<String, String> getTopicToSchemaMap() {
-        return topicToSchemaMap;
-    }
+    Map<String, List<String>> getTopicToSchemaFields() { return topicToSchemaFields;}
 
-    public Map<String, List<String>> getTopicToSchemaFields() {
-        return topicToSchemaFields;
-    }
+    String getIPAddress() { return IPAddress; };
 
-    public String getIPAddress() { return IPAddress; };
+    Map<String, String> getTableToTopicMap() { return tableToTopicMap; }
 
-    public Map<String, String> getTableToTopicMap() {
-        return tableToTopicMap;
-    }
+    Table<String, String, String> getTopicSchemaFieldToTableField() { return this.topicSchemaFieldToTableField; }
 
-    public Table<String, String, String> getTopicSchemaFieldToTableField() { return this.topicSchemaFieldToTableField; }
+    String getZkServers() { return zkServers; }
 
-    public String getZkServers() {
-        return zkServers;
-    }
+    String getDestination() { return destination;}
 
-    public String getDestination() {
-        return destination;
-    }
+    String getUsername() { return username; }
 
-    public String getUsername() {
-        return username;
-    }
+    String getPassword() { return password;}
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    int getBatchSize() { return batchSize; }
 
-    public String getPassword() {
-        return password;
-    }
+    String getServerUrl() { return serverUrl; }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    String getServerUrls() { return serverUrls; }
 
-    public int getBatchSize() { return batchSize; }
+    void setUsername(String username) { this.username = username;}
 
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
+    void setPassword(String password) { this.password = password;}
 
-    public String getServerUrl() {
-        return serverUrl;
-    }
+    void setBatchSize(int batchSize) { this.batchSize = batchSize; }
 
-    public void setServerUrl(String serverUrl) {
-        this.serverUrl = serverUrl;
-    }
+    void setServerUrl(String serverUrl) { this.serverUrl = serverUrl; }
 
-    public String getServerUrls() {
-        return serverUrls;
-    }
+    void setIpInterface(String ipInterface) { IPAddress = Utility.getLocalIP(ipInterface); }
 
-    public void setServerUrls(String serverUrls) {
-        this.serverUrls = serverUrls;
-    }
+    void setServerUrls(String serverUrls) { this.serverUrls = serverUrls;}
 
     /*
     * 获取需要过滤的表列表
     * */
-    public String getTableFilter() {
+    String getTableFilter() {
         return Joiner.on(",").join(filterTableList);
     }
 
-    public boolean isConnectionUrlValid() {
-        if (Strings.isNullOrEmpty(this.zkServers)
+    boolean isConnectionUrlValid() {
+        return !(Strings.isNullOrEmpty(this.zkServers)
                 && Strings.isNullOrEmpty(this.serverUrl)
-                && Strings.isNullOrEmpty(this.serverUrls)) {
-            return false;
-        } else {
-            return true;
-        }
+                && Strings.isNullOrEmpty(this.serverUrls));
     }
 
-    public static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws
+    static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws
             ServerUrlsFormatException {
         List<SocketAddress> addresses = new ArrayList<>();
         if (StringUtils.isNotEmpty(serverUrls)) {
@@ -259,18 +221,12 @@ public class CanalConf {
         }
     }
 
-    public static SocketAddress convertUrlToSocketAddress(String serverUrl) throws ServerUrlsFormatException,
+    static SocketAddress convertUrlToSocketAddress(String serverUrl) throws ServerUrlsFormatException,
             NumberFormatException {
         String[] hostAndPort = serverUrl.split(":");
         if (hostAndPort.length == 2 && StringUtils.isNotEmpty(hostAndPort[1])) {
-            try {
-                int port  = Integer.parseInt(hostAndPort[1]);
-                InetSocketAddress socketAddress = new InetSocketAddress(hostAndPort[0], port);
-                return socketAddress;
-
-            } catch (NumberFormatException exception) {
-                throw exception;
-            }
+            int port  = Integer.parseInt(hostAndPort[1]);
+            return new InetSocketAddress(hostAndPort[0], port);
         } else {
             throw new ServerUrlsFormatException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
                     serverUrl));

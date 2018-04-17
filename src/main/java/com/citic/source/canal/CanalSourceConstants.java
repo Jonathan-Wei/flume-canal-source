@@ -16,43 +16,36 @@
  */
 package com.citic.source.canal;
 
-public class CanalSourceConstants {
+class CanalSourceConstants {
+    static final String IP_INTERFACE = "ipInterface";
 
-    public static final String IP_INTERFACE = "ipInterface";
+    static final String ZOOKEEPER_SERVERS = "zkServers";
+    static final String SERVER_URL = "serverUrl";
+    static final String SERVER_URLS = "serverUrls";
+    static final String DESTINATION = "destination";
+    static final String USERNAME = "username";
+    static final String PASSWORD = "password";
+    static final String BATCH_SIZE = "batchSize";
 
-    public static final String ZOOKEEPER_SERVERS = "zkServers";
-    public static final String SERVER_URL = "serverUrl";
-    public static final String SERVER_URLS = "serverUrls";
-    public static final String DESTINATION = "destination";
-    public static final String USERNAME = "username";
-    public static final String PASSWORD = "password";
-    public static final String BATCH_SIZE = "batchSize";
+    static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
+    static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
 
-    public static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
-    public static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
+    static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
+    static final int DEFAULT_BATCH_SIZE = 1024;
+    static final String DEFAULT_USERNAME = "";
+    static final String DEFAULT_PASSWORD = "";
 
-    public static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
-    public static final int DEFAULT_BATCH_SIZE = 1024;
-    public static final String DEFAULT_USERNAME = "";
-    public static final String DEFAULT_PASSWORD = "";
+    static final String SOURCE_TABLES_COUNTER = "SourceTables";
 
-    public static final String SOURCE_TABLES_COUNTER = "SourceTables";
+    static final String HEADER_TOPIC = "topic";
+    static final String HEADER_SCHEMA = "schema";
+    static final String HEADER_KEY = "key";
+    static final String SQL = "sql";
 
-
-    public static final String HEADER_TOPIC = "topic";
-    public static final String HEADER_SCHEMA = "schema";
-    public static final String HEADER_KEY = "key";
-    public static final String SQL = "sql";
-
-
-    public static final String META_FIELD_TABLE = "__table";
-    public static final String META_FIELD_TS = "__ts";
-    public static final String META_FIELD_DB = "__db";
-    public static final String META_FIELD_TYPE = "__type";
-    public static final String META_FIELD_AGENT = "__agent";
-    public static final String META_FIELD_FROM = "__from";
-
-
-
-
+    static final String META_FIELD_TABLE = "__table";
+    static final String META_FIELD_TS = "__ts";
+    static final String META_FIELD_DB = "__db";
+    static final String META_FIELD_TYPE = "__type";
+    static final String META_FIELD_AGENT = "__agent";
+    static final String META_FIELD_FROM = "__from";
 }
