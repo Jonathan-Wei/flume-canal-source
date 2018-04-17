@@ -68,8 +68,13 @@ class EntryDataHandler {
         // 处理行数据
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, canalConf);
         LOGGER.debug("eventData handleRowData:{}", eventData);
-        // 监控表数据
-        tableCounter.incrementTableReceivedCount(keyName);
+        try {
+            // 监控表数据
+            tableCounter.incrementTableReceivedCount(keyName);
+        } catch (Exception e) {
+            LOGGER.error("table name:{}, attributes:{}", keyName, tableCounter.getAttributes());
+            LOGGER.error(e.getMessage());
+        }
 
         String pk = getPK(rowData);
         // 处理 event Header

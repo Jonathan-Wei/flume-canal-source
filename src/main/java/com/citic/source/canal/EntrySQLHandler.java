@@ -2,6 +2,7 @@ package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.Utility;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.twitter.bijection.Injection;
@@ -64,7 +65,7 @@ class EntrySQLHandler {
         eventMap.put("__table", entryHeader.getTableName());
         eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
         eventMap.put("__db", entryHeader.getSchemaName());
-        eventMap.put("__sql", sql);
+        eventMap.put("__sql", Strings.isNullOrEmpty(sql) ? "no sql" : sql );
         eventMap.put("__agent", canalConf.getIPAddress());
         eventMap.put("__from", canalConf.getFromDBIP());
         return eventMap;

@@ -31,8 +31,11 @@ public class SourceCounter extends MonitoredCounterGroup implements
         }
     }
 
+    public String[] getAttributes() {
+        return this.attributes;
+    }
+
     public long incrementTableReceivedCount(String tableName) {
-        LOGGER.debug("tableName:{}", tableName);
         // 用户配置的可能为 正则表达式,但这里传递进来的是解析后的表名
         // eg: attribute = test\\.test.*, tableName = test.test1
         String regexTableName = this.tableRegexMap.get(tableName);
