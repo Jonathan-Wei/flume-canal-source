@@ -4,9 +4,12 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.twitter.bijection.Injection;
@@ -21,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
@@ -28,12 +32,15 @@ import java.util.Map;
 import static com.citic.source.canal.CanalSourceConstants.*;
 
 
-class EntryDataHandler {
+abstract class EntryDataHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryDataHandler.class);
-    private static final Gson GSON = new Gson();
-    private static final Type JSONType = new TypeToken<Map<String, Object>>(){}.getType();
-    private static final String MIX_TOPIC_PREFIX = "mix_";
-    private static final String MIX_TOPIC_DATA_FIELD_NAME = "data";
+    private final CanalConf canalConf;
+    private final SourceCounter tableCounter;
+
+    private EntryDataHandler(CanalConf canalConf, SourceCounter tableCounter) {
+        this.canalConf = canalConf;
+        this.tableCounter = tableCounter;
+    }
 
     /*
     * 获取表的主键,用于kafka的分区key
@@ -65,15 +72,13 @@ class EntryDataHandler {
     /*
     * 获取数据 Event
     * */
-    static Event getDataEvent(CanalEntry.RowData rowData,
+    Event getDataEvent(CanalEntry.RowData rowData,
                               CanalEntry.Header entryHeader,
-                              CanalEntry.EventType eventType,
-                              CanalConf canalConf,
-                              SourceCounter tableCounter) {
+                              CanalEntry.EventType eventType) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
         // 处理行数据
-        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, topic, canalConf);
+        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
         try {
             // 监控表数据
@@ -88,13 +93,17 @@ class EntryDataHandler {
         LOGGER.debug("RowData pk:{}", pk);
         Map<String, String> header = handleRowDataHeader(topic, pk);
 
-        return dataToAvroEvent(eventData, header, topic, canalConf);
+        return dataToEvent(eventData, header, topic);
     }
+
+    abstract Event dataToEvent(Map<String, String> eventData,
+                                  Map<String, String> eventHeader,
+                                  String topic);
 
     /*
     * 处理 Event Header 获取数据的 topic
     * */
-    private static Map<String, String> handleRowDataHeader(String topic, String kafkaKey) {
+    private Map<String, String> handleRowDataHeader(String topic, String kafkaKey) {
         Map<String, String> header = Maps.newHashMap();
         if (kafkaKey != null){
             // 将表的主键作为kafka分区的key
@@ -104,57 +113,12 @@ class EntryDataHandler {
         return header;
     }
 
-    private static boolean isDataToMixTopic(String topic) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(topic), "topic cannot empty");
-        return topic.startsWith(MIX_TOPIC_PREFIX);
-    }
-
-    /*
-    * 将 data, header 转换为 Avro Event 格式
-    * */
-    private static Event dataToAvroEvent(Map<String, String> eventData,
-                                         Map<String, String> eventHeader,
-                                         String topic,
-                                         CanalConf canalConf) {
-
-        List<String> schemaFieldList  = canalConf.getTopicToSchemaFields().get(topic);
-
-        List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
-                                                   META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
-
-        String schemaName = canalConf.getTopicToSchemaMap().get(topic);
-
-        Schema.Parser parser = new Schema.Parser();
-        String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, attrList), schemaName);
-        Schema schema = parser.parse(schemaString);
-
-        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-        GenericRecord avroRecord = new GenericData.Record(schema);
-
-        for (String fieldStr: schemaFieldList) {
-            String tableField = canalConf.getTopicSchemaFieldToTableField().get(topic, fieldStr);
-            avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
-        }
-
-        for (String fieldStr: attrList) {
-            avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
-        }
-
-        byte[] eventBody = recordInjection.apply(avroRecord);
-
-        // 用于sink解析
-        eventHeader.put(HEADER_SCHEMA, schemaString);
-        return EventBuilder.withBody(eventBody,eventHeader);
-    }
-
     /*
     * 处理行数据，并添加其他字段信息
     * */
-    private static Map<String, String> handleRowData(CanalEntry.RowData rowData,
+    private Map<String, String> handleRowData(CanalEntry.RowData rowData,
                                                      CanalEntry.Header entryHeader,
-                                                     CanalEntry.EventType eventType,
-                                                     String topic,
-                                                     CanalConf canalConf) {
+                                                     CanalEntry.EventType eventType) {
         Map<String, String> eventMap = Maps.newHashMap();
         Map<String, String> rowDataMap;
 
@@ -172,24 +136,14 @@ class EntryDataHandler {
         eventMap.put(META_FIELD_AGENT, canalConf.getIPAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
 
-        /*
-        * topic 以 mix_开头表示所有行数据放入__data 字符串中,不做 arvo schema 校验
-        * 数据统一放入 data 中
-        * */
-        if(isDataToMixTopic(topic)) {
-            String dataJSONString =  GSON.toJson(rowDataMap, JSONType);
-            eventMap.put(MIX_TOPIC_DATA_FIELD_NAME, dataJSONString);
-        } else {
-            eventMap.putAll(rowDataMap);
-        }
-
+        eventMap.putAll(rowDataMap);
         return  eventMap;
     }
 
     /*
     * 对列数据进行解析
     * */
-    private static Map<String, String> convertColumnListToMap(List<CanalEntry.Column> columns, CanalEntry.Header entryHeader) {
+    private Map<String, String> convertColumnListToMap(List<CanalEntry.Column> columns, CanalEntry.Header entryHeader) {
         Map<String, String> rowMap = Maps.newHashMap();
 
         String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
@@ -227,6 +181,134 @@ class EntryDataHandler {
             rowMap.put(column.getName(), colValue);
         }
         return rowMap;
+    }
+
+    static class Avro extends EntryDataHandler{
+        // topic list
+        private final List<String> topicAppendList = Lists.newArrayList();
+
+        // topic -> schema
+        private final Map<String, String> topicToSchemaMap = Maps.newHashMap();
+
+        // topic -> schema fields list
+        private final Map<String, List<String>> topicToSchemaFields = Maps.newHashMap();
+        // topic,schema_field -> table_field
+        private final Table<String, String, String> topicSchemaFieldToTableField = HashBasedTable.create();
+
+
+        Avro(CanalConf canalConf, SourceCounter tableCounter) {
+            super(canalConf, tableCounter);
+            splitTableToTopicMap(canalConf.getTableToTopicMap());
+            splitTableFieldsFilter(canalConf.getTableFieldsFilter());
+        }
+
+        private void splitTableToTopicMap(String tableToTopicMap) {
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicRegexMap cannot empty");
+            // test.test:test123:schema1;test.test1:test234:schema2
+            Splitter.on(';')
+                    .omitEmptyStrings()
+                    .trimResults()
+                    .split(tableToTopicMap)
+                    .forEach(item ->{
+                        String[] result =  item.split(":");
+                        topicAppendList.add(result[1].trim());
+                        // topic -> avro schema
+                        this.topicToSchemaMap.put(result[1].trim(), result[2].trim());
+                    });
+        }
+
+        /*
+        * 设置表名与字段过滤对应 table
+        * */
+        private void splitTableFieldsFilter(String tableFieldsFilter) {
+            if (Strings.isNullOrEmpty(tableFieldsFilter))
+                return;
+            // 这里表的顺序根据配置文件中 tableToTopicRegexMap 表的顺序
+            // id|id1,name|name1;uid|uid2,name|name2
+            final int[] counter = {0};
+            Splitter.on(';')
+                    .omitEmptyStrings()
+                    .trimResults()
+                    .split(tableFieldsFilter)
+                    .forEach(item -> {
+                        String topic = topicAppendList.get(counter[0]);
+                        counter[0] += 1;
+
+                        List<String> schemaFields = Lists.newArrayList();
+                        Splitter.on(",")
+                                .omitEmptyStrings()
+                                .trimResults()
+                                .split(item)
+                                .forEach(field -> {
+                                    String[] fieldTableSchema = field.split("\\|");
+                                    Preconditions.checkArgument(fieldTableSchema.length == 2,
+                                            "tableFieldsFilter 格式错误 eg: id|id1,name|name1");
+
+                                    Preconditions.checkArgument(!Strings.isNullOrEmpty(fieldTableSchema[0].trim()),
+                                            "table field cannot empty");
+                                    Preconditions.checkArgument(!Strings.isNullOrEmpty(fieldTableSchema[1].trim()),
+                                            "schema field cannot empty");
+
+                                    schemaFields.add(fieldTableSchema[1]);
+                                    this.topicSchemaFieldToTableField.put(topic, fieldTableSchema[1], fieldTableSchema[0]);
+
+                                });
+                        topicToSchemaFields.put(topic, schemaFields);
+                    });
+        }
+
+        /*
+        * 将 data, header 转换为 Avro Event 格式
+        * */
+        Event dataToEvent(Map<String, String> eventData,
+                                      Map<String, String> eventHeader,
+                                      String topic) {
+
+            List<String> schemaFieldList  = topicToSchemaFields.get(topic);
+
+            List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
+                    META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
+
+            String schemaName = topicToSchemaMap.get(topic);
+
+            Schema.Parser parser = new Schema.Parser();
+            String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, attrList), schemaName);
+            Schema schema = parser.parse(schemaString);
+
+            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+            GenericRecord avroRecord = new GenericData.Record(schema);
+
+            for (String fieldStr: schemaFieldList) {
+                String tableField = topicSchemaFieldToTableField.get(topic, fieldStr);
+                avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
+            }
+
+            for (String fieldStr: attrList) {
+                avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
+            }
+
+            byte[] eventBody = recordInjection.apply(avroRecord);
+
+            // 用于sink解析
+            eventHeader.put(HEADER_SCHEMA, schemaString);
+            return EventBuilder.withBody(eventBody,eventHeader);
+        }
+    }
+
+    static class Json extends EntryDataHandler {
+        private static final Gson GSON = new Gson();
+        private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
+
+        Json(CanalConf canalConf, SourceCounter tableCounter) {
+            super(canalConf, tableCounter);
+        }
+
+        @Override
+        Event dataToEvent(Map<String, String> eventData, Map<String, String> eventHeader,
+                          String topic) {
+            byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+            return EventBuilder.withBody(eventBody,eventHeader);
+        }
     }
 
 }

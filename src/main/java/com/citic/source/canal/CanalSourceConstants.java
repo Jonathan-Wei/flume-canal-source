@@ -27,8 +27,10 @@ class CanalSourceConstants {
     static final String PASSWORD = "password";
     static final String BATCH_SIZE = "batchSize";
 
-    static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
+    static final String TABLE_TO_TOPIC_MAP = "tableToTopicRegexMap";
     static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
+
+    static final String USE_AVRO = "useAvro";
 
     static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
     static final int DEFAULT_BATCH_SIZE = 1024;

@@ -30,7 +30,21 @@ import java.util.List;
 class EntryConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
 
-    static List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf, SourceCounter tableCounter) {
+    private final EntrySQLHandler sqlHandler;
+    private final EntryDataHandler dataHandler;
+
+    EntryConverter(boolean useAvro, CanalConf canalConf, SourceCounter tableCounter) {
+        if (useAvro) {
+            this.sqlHandler = new EntrySQLHandler.Avro();
+            this.dataHandler = new EntryDataHandler.Avro(canalConf, tableCounter);
+        } else {
+            this.sqlHandler = new EntrySQLHandler.Json();
+            this.dataHandler = new EntryDataHandler.Json(canalConf, tableCounter);
+        }
+
+    }
+
+    List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf, SourceCounter tableCounter) {
         List<Event> events = new ArrayList<>();
         /*
         * TODO: 事务相关,暂不做处理
@@ -65,11 +79,10 @@ class EntryConverter {
                 // do nothing
             } else if (rowChange.getIsDdl()) {
                 // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
-                events.add(EntrySQLHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
+                events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
             } else {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
-                    Event dataEvent = EntryDataHandler.getDataEvent(rowData, eventHeader,
-                            eventType, canalConf, tableCounter);
+                    Event dataEvent = this.dataHandler.getDataEvent(rowData, eventHeader, eventType);
                     events.add(dataEvent);
                 }
             }

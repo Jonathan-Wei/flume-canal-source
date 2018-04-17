@@ -30,18 +30,20 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static com.citic.source.canal.CanalSourceConstants.SOURCE_TABLES_COUNTER;
+import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
 
 public class CanalSource extends AbstractPollableSource
         implements Configurable {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalSource.class);
 
     private CanalClient canalClient = null;
-    private CanalConf canalConf = new CanalConf();
+    private CanalConf canalConf;
 
     private final List<Event> eventsAll = Lists.newArrayList();
 
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private SourceCounter tableCounter;
+    private EntryConverter entryConverter;
 
     /*
     * 获取配置
@@ -65,6 +67,13 @@ public class CanalSource extends AbstractPollableSource
     @Override
     protected void doConfigure(Context context) throws FlumeException {
         LOGGER.debug("configure...");
+        // 判断序列话格式
+        boolean useAvro = context.getBoolean(USE_AVRO, true);
+        if (useAvro)
+            canalConf = new CanalConf.Avro();
+        else
+            canalConf = new CanalConf.Json();
+
         setCanalConf(context);
         // CanalSourceConstants.TABLE_TO_TOPIC_MAP 配置不能为空
         if (canalConf.getTableToTopicMap() == null || canalConf.getTableToTopicMap().isEmpty()){
@@ -86,6 +95,8 @@ public class CanalSource extends AbstractPollableSource
             tableCounter = new SourceCounter(getName() + "-" + SOURCE_TABLES_COUNTER,
                     canalConf.getTableFilter().split(","));
         }
+
+        entryConverter = new EntryConverter(useAvro, canalConf, tableCounter);
     }
 
     @Override
@@ -120,7 +131,7 @@ public class CanalSource extends AbstractPollableSource
             return Status.BACKOFF;
 
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = EntryConverter.convert(entry, canalConf, tableCounter);
+            List<Event> events = entryConverter.convert(entry, canalConf, tableCounter);
             eventsAll.addAll(events);
         }
 

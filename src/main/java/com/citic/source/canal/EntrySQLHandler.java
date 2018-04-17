@@ -5,6 +5,8 @@ import com.citic.helper.Utility;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
@@ -14,52 +16,30 @@ import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 import org.slf4j.helpers.Util;
 
+import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 
 import static com.citic.source.canal.CanalSourceConstants.*;
 
-class EntrySQLHandler {
+abstract class EntrySQLHandler {
     /*
     * 获取 sql topic Event数据
     * */
-    static Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
+    Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
         Map<String, String> eventSql = handleSQL(sql, entryHeader, canalConf);
         Map<String, String> sqlHeader = Maps.newHashMap();
         sqlHeader.put(HEADER_TOPIC, SQL);
-        return dataToAvroSQLEvent(eventSql, sqlHeader);
+        return dataToSQLEvent(eventSql, sqlHeader);
     }
 
-    /*
-    * 将 data, header 转换为 JSON Event 格式
-    * */
-    private static Event dataToAvroSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
-        List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
-                                                    META_FIELD_AGENT, META_FIELD_FROM, SQL);
-
-        Schema.Parser parser = new Schema.Parser();
-
-        String schemaString = Utility.getTableFieldSchema(attrList, SQL);
-        Schema schema = parser.parse(schemaString);
-        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-
-        GenericRecord avroRecord = new GenericData.Record(schema);
-
-        for (String fieldStr: attrList) {
-            avroRecord.put(fieldStr, eventData.get(fieldStr));
-        }
-
-        byte[] eventBody = recordInjection.apply(avroRecord);
-
-        // 用于sink解析
-        eventHeader.put(HEADER_SCHEMA, schemaString);
-        return EventBuilder.withBody(eventBody,eventHeader);
-    }
+    abstract Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader);
 
     /*
     * 处理 sql topic 的数据格式
     * */
-    private static Map<String, String> handleSQL(String sql, CanalEntry.Header entryHeader, CanalConf canalConf) {
+    private Map<String, String> handleSQL(String sql, CanalEntry.Header entryHeader, CanalConf canalConf) {
         Map<String, String > eventMap = Maps.newHashMap();
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
         eventMap.put(META_FIELD_TS, String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
@@ -69,4 +49,46 @@ class EntrySQLHandler {
         eventMap.put(SQL, Strings.isNullOrEmpty(sql) ? "no sql" : sql );
         return eventMap;
     }
+
+    static class Avro extends EntrySQLHandler {
+        /*
+    * 将 data, header 转换为 JSON Event 格式
+    * */
+        Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
+            List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
+                    META_FIELD_AGENT, META_FIELD_FROM, SQL);
+
+            Schema.Parser parser = new Schema.Parser();
+
+            String schemaString = Utility.getTableFieldSchema(attrList, SQL);
+            Schema schema = parser.parse(schemaString);
+            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+
+            GenericRecord avroRecord = new GenericData.Record(schema);
+
+            for (String fieldStr: attrList) {
+                avroRecord.put(fieldStr, eventData.get(fieldStr));
+            }
+
+            byte[] eventBody = recordInjection.apply(avroRecord);
+
+            // 用于sink解析
+            eventHeader.put(HEADER_SCHEMA, schemaString);
+            return EventBuilder.withBody(eventBody,eventHeader);
+        }
+    }
+
+    static class Json extends EntrySQLHandler {
+        private static final Gson GSON = new Gson();
+        private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
+
+        @Override
+        Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
+            byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+            return EventBuilder.withBody(eventBody,eventHeader);
+        }
+    }
+
 }
+
+
