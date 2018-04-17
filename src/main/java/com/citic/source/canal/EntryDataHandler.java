@@ -105,7 +105,7 @@ class EntryDataHandler {
     }
 
     private static boolean isDataToMixTopic(String topic) {
-        Preconditions.checkArgument(Strings.isNullOrEmpty(topic), "topic cannot empty");
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(topic), "topic cannot empty");
         return topic.startsWith(MIX_TOPIC_PREFIX);
     }
 

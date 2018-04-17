@@ -59,7 +59,7 @@ class CanalConf {
     * 设置表名和 topic 对应 map
     * */
     void setTableToTopicMap(String tableToTopicMap) {
-        Preconditions.checkArgument(Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
         // test.test:test123:schema1;test.test1:test234:schema2
         Splitter.on(';')
                 .omitEmptyStrings()
@@ -70,11 +70,11 @@ class CanalConf {
                     Preconditions.checkArgument(result.length == 3,
                             "tableToTopicMap format incorrect eg: db.tbl1:topic1:schema1");
 
-                    Preconditions.checkArgument(Strings.isNullOrEmpty(result[0].trim()),
+                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
                             "db.table cannot empty");
-                    Preconditions.checkArgument(Strings.isNullOrEmpty(result[1].trim()),
+                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
                             "topic cannot empty");
-                    Preconditions.checkArgument(Strings.isNullOrEmpty(result[2].trim()),
+                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[2].trim()),
                             "schema cannot empty");
 
                     filterTableList.add(result[0].trim());
@@ -114,9 +114,9 @@ class CanalConf {
                         Preconditions.checkArgument(fieldTableSchema.length == 2,
                                 "tableFieldsFilter 格式错误 eg: id|id1,name|name1");
 
-                        Preconditions.checkArgument(Strings.isNullOrEmpty(fieldTableSchema[0].trim()),
+                        Preconditions.checkArgument(!Strings.isNullOrEmpty(fieldTableSchema[0].trim()),
                                 "table field cannot empty");
-                        Preconditions.checkArgument(Strings.isNullOrEmpty(fieldTableSchema[1].trim()),
+                        Preconditions.checkArgument(!Strings.isNullOrEmpty(fieldTableSchema[1].trim()),
                                 "schema field cannot empty");
 
                         schemaFields.add(fieldTableSchema[1]);
@@ -143,12 +143,12 @@ class CanalConf {
     }
 
     void setZkServers(String zkServers) {
-        Preconditions.checkArgument(Strings.isNullOrEmpty(zkServers), "zkServers cannot empty");
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(zkServers), "zkServers cannot empty");
         this.zkServers = zkServers;
     }
 
     void setDestination(String destination) {
-        Preconditions.checkArgument(Strings.isNullOrEmpty(destination), "destination cannot empty");
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(destination), "destination cannot empty");
         this.destination = destination;
     }
 
