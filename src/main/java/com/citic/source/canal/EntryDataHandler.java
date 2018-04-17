@@ -3,8 +3,12 @@ package com.citic.source.canal;
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
@@ -16,17 +20,20 @@ import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 
-import static com.citic.source.canal.CanalSourceConstants.HEADER_KEY;
-import static com.citic.source.canal.CanalSourceConstants.HEADER_SCHEMA;
-import static com.citic.source.canal.CanalSourceConstants.HEADER_TOPIC;
+import static com.citic.source.canal.CanalSourceConstants.*;
 
 
 class EntryDataHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryDataHandler.class);
+    private static final Gson GSON = new Gson();
+    private static final Type JSONType = new TypeToken<Map<String, Object>>(){}.getType();
+    private static final String MIX_TOPIC_PREFIX = "mix_";
+    private static final String MIX_TOPIC_DATA_FIELD_NAME = "data";
 
     /*
     * 获取表的主键,用于kafka的分区key
@@ -66,7 +73,7 @@ class EntryDataHandler {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
         // 处理行数据
-        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, canalConf);
+        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, topic, canalConf);
         LOGGER.debug("eventData handleRowData:{}", eventData);
         try {
             // 监控表数据
@@ -97,6 +104,11 @@ class EntryDataHandler {
         return header;
     }
 
+    private static boolean isDataToMixTopic(String topic) {
+        Preconditions.checkArgument(Strings.isNullOrEmpty(topic), "topic cannot empty");
+        return topic.startsWith(MIX_TOPIC_PREFIX);
+    }
+
     /*
     * 将 data, header 转换为 Avro Event 格式
     * */
@@ -105,8 +117,10 @@ class EntryDataHandler {
                                          String topic,
                                          CanalConf canalConf) {
 
-        List<String> schemaFieldList = canalConf.getTopicToSchemaFields().get(topic);
-        List<String> attrList = Lists.newArrayList("__table", "__ts", "__db", "__type", "__agent", "__from");
+        List<String> schemaFieldList  = canalConf.getTopicToSchemaFields().get(topic);
+
+        List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
+                                                   META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
 
         String schemaName = canalConf.getTopicToSchemaMap().get(topic);
 
@@ -119,11 +133,11 @@ class EntryDataHandler {
 
         for (String fieldStr: schemaFieldList) {
             String tableField = canalConf.getTopicSchemaFieldToTableField().get(topic, fieldStr);
-            avroRecord.put(fieldStr, eventData.get(tableField));
+            avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
         }
 
         for (String fieldStr: attrList) {
-            avroRecord.put(fieldStr, eventData.get(fieldStr));
+            avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
         }
 
         byte[] eventBody = recordInjection.apply(avroRecord);
@@ -139,6 +153,7 @@ class EntryDataHandler {
     private static Map<String, String> handleRowData(CanalEntry.RowData rowData,
                                                      CanalEntry.Header entryHeader,
                                                      CanalEntry.EventType eventType,
+                                                     String topic,
                                                      CanalConf canalConf) {
         Map<String, String> eventMap = Maps.newHashMap();
         Map<String, String> rowDataMap;
@@ -149,13 +164,25 @@ class EntryDataHandler {
         } else {
             rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
         }
-        eventMap.put("__table", entryHeader.getTableName());
-        eventMap.put("__ts", String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
-        eventMap.put("__db", entryHeader.getSchemaName());
-        eventMap.put("__type", eventType.toString());
-        eventMap.put("__agent", canalConf.getIPAddress());
-        eventMap.put("__from", canalConf.getFromDBIP());
-        eventMap.putAll(rowDataMap);
+
+        eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
+        eventMap.put(META_FIELD_TS, String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
+        eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
+        eventMap.put(META_FIELD_TYPE, eventType.toString());
+        eventMap.put(META_FIELD_AGENT, canalConf.getIPAddress());
+        eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
+
+        /*
+        * topic 以 mix_开头表示所有行数据放入__data 字符串中,不做 arvo schema 校验
+        * 数据统一放入 data 中
+        * */
+        if(isDataToMixTopic(topic)) {
+            String dataJSONString =  GSON.toJson(rowDataMap, JSONType);
+            eventMap.put(MIX_TOPIC_DATA_FIELD_NAME, dataJSONString);
+        } else {
+            eventMap.putAll(rowDataMap);
+        }
+
         return  eventMap;
     }
 

@@ -42,7 +42,15 @@ public class CanalSourceConstants {
     public static final String HEADER_TOPIC = "topic";
     public static final String HEADER_SCHEMA = "schema";
     public static final String HEADER_KEY = "key";
+    public static final String SQL = "sql";
 
+
+    public static final String META_FIELD_TABLE = "__table";
+    public static final String META_FIELD_TS = "__ts";
+    public static final String META_FIELD_DB = "__db";
+    public static final String META_FIELD_TYPE = "__type";
+    public static final String META_FIELD_AGENT = "__agent";
+    public static final String META_FIELD_FROM = "__from";
 
 
 
