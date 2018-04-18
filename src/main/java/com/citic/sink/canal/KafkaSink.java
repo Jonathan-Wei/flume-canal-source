@@ -475,7 +475,7 @@ class SinkCallback implements Callback {
     private final File kafkaSendErrorFile;
     private final boolean useAvroEventFormat;
 
-    public SinkCallback(long startTime, Object record, boolean useAvroEventFormat, File kafkaSendErrorFile) {
+    SinkCallback(long startTime, Object record, boolean useAvroEventFormat, File kafkaSendErrorFile) {
         this.record = record;
         this.startTime = startTime;
         this.kafkaSendErrorFile = kafkaSendErrorFile;
@@ -485,18 +485,18 @@ class SinkCallback implements Callback {
     public void onCompletion(RecordMetadata metadata, Exception exception) {
         if (exception != null) {
             logger.debug("Error sending message to Kafka {} ", exception.getMessage());
-        }
 
-        try {
-            String jsonString;
-            if (this.useAvroEventFormat) {
-                jsonString = Utility.avroToJson((GenericRecord)this.record);
-            } else {
-                jsonString = new String((byte[])this.record, Charset.forName("UTF-8"));
+            try {
+                String jsonString;
+                if (this.useAvroEventFormat) {
+                    jsonString = Utility.avroToJson((GenericRecord)this.record);
+                } else {
+                    jsonString = new String((byte[])this.record, Charset.forName("UTF-8"));
+                }
+                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
+            } catch (IOException e) {
+                logger.debug("Error write message to error file {} ", e.getMessage());
             }
-            Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
-        } catch (IOException e) {
-            logger.debug("Error write message to error file {} ", e.getMessage());
         }
 
         if (logger.isDebugEnabled()) {
