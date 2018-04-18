@@ -42,7 +42,6 @@ class CanalSourceConstants {
     static final String HEADER_TOPIC = "topic";
     static final String HEADER_SCHEMA = "schema";
     static final String HEADER_KEY = "key";
-    static final String DDL_SQL = "ddl_sql";
 
     static final String META_FIELD_TABLE = "__table";
     static final String META_FIELD_TS = "__ts";
