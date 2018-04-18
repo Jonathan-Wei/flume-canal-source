@@ -220,6 +220,16 @@ abstract class EntryDataHandler {
                     .split(tableToTopicMap)
                     .forEach(item ->{
                         String[] result =  item.split(":");
+
+                        Preconditions.checkArgument(result.length == 3,
+                                "tableToTopicMap format incorrect eg: db.tbl1:topic1:schema1");
+                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
+                                "db.table cannot empty");
+                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
+                                "topic cannot empty");
+                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[2].trim()),
+                                "schema cannot empty");
+
                         // result[1] == topic, result[2] == schema
                         topicAppendList.add(result[1].trim());
                         // topic -> avro schema

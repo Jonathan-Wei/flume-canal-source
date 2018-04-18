@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -211,7 +212,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
                         record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
                                 dataRecord);
                     }
-                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord, kafkaSendErrorFile)));
+                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord, useAvroEventFormat,
+                            kafkaSendErrorFile)));
                 } catch (NumberFormatException ex) {
                     throw new EventDeliveryException("Non integer partition id specified", ex);
                 } catch (Exception ex) {
@@ -468,26 +470,33 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
 class SinkCallback implements Callback {
     private static final Logger logger = LoggerFactory.getLogger(SinkCallback.class);
-    private long startTime;
-    private Object record;
-    private File kafkaSendErrorFile;
+    private final long startTime;
+    private final Object record;
+    private final File kafkaSendErrorFile;
+    private final boolean useAvroEventFormat;
 
-    public SinkCallback(long startTime, Object record, File kafkaSendErrorFile) {
+    public SinkCallback(long startTime, Object record, boolean useAvroEventFormat, File kafkaSendErrorFile) {
         this.record = record;
         this.startTime = startTime;
         this.kafkaSendErrorFile = kafkaSendErrorFile;
+        this.useAvroEventFormat = useAvroEventFormat;
     }
 
     public void onCompletion(RecordMetadata metadata, Exception exception) {
         if (exception != null) {
             logger.debug("Error sending message to Kafka {} ", exception.getMessage());
+        }
 
-//            try {
-//                String jsonString = Utility.avroToJson(this.record);
-//                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
-//            } catch (IOException e) {
-//                logger.debug("Error write message to error file {} ", e.getMessage());
-//            }
+        try {
+            String jsonString;
+            if (this.useAvroEventFormat) {
+                jsonString = Utility.avroToJson((GenericRecord)this.record);
+            } else {
+                jsonString = new String((byte[])this.record, Charset.forName("UTF-8"));
+            }
+            Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
+        } catch (IOException e) {
+            logger.debug("Error write message to error file {} ", e.getMessage());
         }
 
         if (logger.isDebugEnabled()) {

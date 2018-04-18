@@ -81,6 +81,15 @@ class CanalConf {
                 .forEach(item ->{
                     String[] result =  item.split(":");
 
+                    Preconditions.checkArgument(result.length >= 2,
+                            "tableToTopicMap format incorrect json: db.tbl1:topic1;db.tbl2:topic2 " +
+                                    "avro: db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
+
+                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
+                            "db.table cannot empty");
+                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
+                            "topic cannot empty");
+
                     filterTableList.add(result[0].trim());
                     // db.table -> topic
                     this.tableToTopicRegexMap.put(result[0].trim(), result[1].trim());
