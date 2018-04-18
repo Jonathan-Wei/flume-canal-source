@@ -173,7 +173,7 @@ abstract class CanalConf {
         @Override
         void splitTableToTopicMap(String tableToTopicMap) {
             if (Strings.isNullOrEmpty(tableToTopicMap)){
-                throw new IllegalArgumentException("tableToTopicRegexMap cannot empty");
+                throw new IllegalArgumentException("tableToTopicMap cannot empty");
             }
             // test.test:test123;test.test1:test234
             Splitter.on(';')
@@ -183,7 +183,7 @@ abstract class CanalConf {
                     .forEach(item ->{
                         String[] result =  item.split(":");
                         Preconditions.checkArgument(result.length == 2,
-                                "tableToTopicRegexMap format incorrect eg:db.tbl1:topic1;db.tbl2:topic2");
+                                "tableToTopicMap format incorrect eg:db.tbl1:topic1;db.tbl2:topic2");
 
                         Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
                                 "db.table cannot empty");
@@ -202,7 +202,7 @@ abstract class CanalConf {
         * */
         @Override
         void splitTableToTopicMap(String tableToTopicMap) {
-            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicRegexMap cannot empty");
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
             // test.test:test123:schema1;test.test1:test234:schema2
             Splitter.on(';')
                     .omitEmptyStrings()
@@ -211,7 +211,7 @@ abstract class CanalConf {
                     .forEach(item ->{
                         String[] result =  item.split(":");
                         Preconditions.checkArgument(result.length == 3,
-                                "tableToTopicRegexMap format incorrect eg: db.tbl1:topic1:schema1");
+                                "tableToTopicMap format incorrect eg: db.tbl1:topic1:schema1");
 
                         Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
                                 "db.table cannot empty");
