@@ -14,7 +14,6 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
-import org.slf4j.helpers.Util;
 
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
@@ -25,14 +24,14 @@ import static com.citic.source.canal.CanalSourceConstants.*;
 
 abstract class EntrySQLHandler {
     private static final List<String> ATTR_LIST = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
-            META_FIELD_AGENT, META_FIELD_FROM, SQL);
+            META_FIELD_AGENT, META_FIELD_FROM, META_FIELD_SQL);
     /*
     * 获取 sql topic Event数据
     * */
     Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
         Map<String, String> eventSql = handleSQL(sql, entryHeader, canalConf);
         Map<String, String> sqlHeader = Maps.newHashMap();
-        sqlHeader.put(HEADER_TOPIC, SQL);
+        sqlHeader.put(HEADER_TOPIC, DDL_SQL);
         return dataToSQLEvent(eventSql, sqlHeader);
     }
 
@@ -48,7 +47,7 @@ abstract class EntrySQLHandler {
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
         eventMap.put(META_FIELD_AGENT, canalConf.getIPAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
-        eventMap.put(SQL, Strings.isNullOrEmpty(sql) ? "no sql" : sql );
+        eventMap.put(META_FIELD_SQL, Strings.isNullOrEmpty(sql) ? "no sql" : sql );
         return eventMap;
     }
 
@@ -60,7 +59,7 @@ abstract class EntrySQLHandler {
 
             Schema.Parser parser = new Schema.Parser();
 
-            String schemaString = Utility.getTableFieldSchema(ATTR_LIST, SQL);
+            String schemaString = Utility.getTableFieldSchema(ATTR_LIST, DDL_SQL);
             Schema schema = parser.parse(schemaString);
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
 

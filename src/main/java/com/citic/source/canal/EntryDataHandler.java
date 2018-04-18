@@ -368,7 +368,7 @@ abstract class EntryDataHandler {
             * */
             if (Strings.isNullOrEmpty(tableFieldsFilter))
                 return;
-            
+
             final int[] counter = {0};
             Splitter.on(';')
                     .omitEmptyStrings()
