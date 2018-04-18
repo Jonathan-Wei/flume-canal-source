@@ -366,6 +366,9 @@ abstract class EntryDataHandler {
             * 这里表的顺序根据配置文件中 tableToTopicMap 表的顺序
             * id,name;uid,name
             * */
+            if (Strings.isNullOrEmpty(tableFieldsFilter))
+                return;
+            
             final int[] counter = {0};
             Splitter.on(';')
                     .omitEmptyStrings()
