@@ -220,6 +220,7 @@ abstract class EntryDataHandler {
                     .split(tableToTopicMap)
                     .forEach(item ->{
                         String[] result =  item.split(":");
+                        // result[1] == topic, result[2] == schema
                         topicAppendList.add(result[1].trim());
                         // topic -> avro schema
                         this.topicToSchemaMap.put(result[1].trim(), result[2].trim());

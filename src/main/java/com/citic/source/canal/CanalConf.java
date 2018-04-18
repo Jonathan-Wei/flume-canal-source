@@ -31,7 +31,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
 
-abstract class CanalConf {
+class CanalConf {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
     private String IPAddress;
     private String zkServers;
@@ -46,10 +46,9 @@ abstract class CanalConf {
     private String tableFieldsFilter;
 
     // db.table -> topic
-    Map<String, String> tableToTopicRegexMap = new RegexHashMap<>();
-    List<String> filterTableList = Lists.newArrayList();
+    private Map<String, String> tableToTopicRegexMap = new RegexHashMap<>();
+    private List<String> filterTableList = Lists.newArrayList();
 
-    abstract void splitTableToTopicMap(String tableToTopicMap);
 
     void setTableFieldsFilter(String tableFieldsFilter){
         this.tableFieldsFilter = tableFieldsFilter;
@@ -71,6 +70,21 @@ abstract class CanalConf {
     String getFromDBIP() {
         // destination example: 192_168_2_24-3306
         return this.destination.replace("-", ":").replace("_", ".");
+    }
+
+    private void splitTableToTopicMap(String tableToTopicMap) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
+        Splitter.on(';')
+                .omitEmptyStrings()
+                .trimResults()
+                .split(tableToTopicMap)
+                .forEach(item ->{
+                    String[] result =  item.split(":");
+
+                    filterTableList.add(result[0].trim());
+                    // db.table -> topic
+                    this.tableToTopicRegexMap.put(result[0].trim(), result[1].trim());
+                });
     }
 
     /*
@@ -165,66 +179,5 @@ abstract class CanalConf {
             throw new ServerUrlsFormatException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
                     serverUrl));
         }
-    }
-
-
-
-    static class Json extends CanalConf {
-        @Override
-        void splitTableToTopicMap(String tableToTopicMap) {
-            if (Strings.isNullOrEmpty(tableToTopicMap)){
-                throw new IllegalArgumentException("tableToTopicMap cannot empty");
-            }
-            // test.test:test123;test.test1:test234
-            Splitter.on(';')
-                    .omitEmptyStrings()
-                    .trimResults()
-                    .split(tableToTopicMap)
-                    .forEach(item ->{
-                        String[] result =  item.split(":");
-                        Preconditions.checkArgument(result.length == 2,
-                                "tableToTopicMap format incorrect eg:db.tbl1:topic1;db.tbl2:topic2");
-
-                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
-                                "db.table cannot empty");
-                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
-                                "topic cannot empty");
-
-                        filterTableList.add(result[0].trim());
-                        this.tableToTopicRegexMap.put(result[0].trim(), result[1].trim());
-                    });
-        }
-    }
-
-    static class Avro extends CanalConf{
-        /*
-        * 设置表名和 topic 对应 map
-        * */
-        @Override
-        void splitTableToTopicMap(String tableToTopicMap) {
-            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
-            // test.test:test123:schema1;test.test1:test234:schema2
-            Splitter.on(';')
-                    .omitEmptyStrings()
-                    .trimResults()
-                    .split(tableToTopicMap)
-                    .forEach(item ->{
-                        String[] result =  item.split(":");
-                        Preconditions.checkArgument(result.length == 3,
-                                "tableToTopicMap format incorrect eg: db.tbl1:topic1:schema1");
-
-                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
-                                "db.table cannot empty");
-                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
-                                "topic cannot empty");
-                        Preconditions.checkArgument(!Strings.isNullOrEmpty(result[2].trim()),
-                                "schema cannot empty");
-
-                        filterTableList.add(result[0].trim());
-                        // db.table -> topic
-                        this.tableToTopicRegexMap.put(result[0].trim(), result[1].trim());
-                    });
-        }
-
     }
 }

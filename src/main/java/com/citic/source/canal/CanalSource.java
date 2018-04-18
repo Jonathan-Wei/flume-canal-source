@@ -69,10 +69,7 @@ public class CanalSource extends AbstractPollableSource
         LOGGER.debug("configure...");
         // 判断序列话格式
         boolean useAvro = context.getBoolean(USE_AVRO, true);
-        if (useAvro)
-            canalConf = new CanalConf.Avro();
-        else
-            canalConf = new CanalConf.Json();
+        canalConf = new CanalConf();
 
         setCanalConf(context);
         // CanalSourceConstants.TABLE_TO_TOPIC_MAP 配置不能为空
