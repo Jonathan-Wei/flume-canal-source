@@ -24,6 +24,8 @@ import java.util.Map;
 import static com.citic.source.canal.CanalSourceConstants.*;
 
 abstract class EntrySQLHandler {
+    private static final List<String> ATTR_LIST = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
+            META_FIELD_AGENT, META_FIELD_FROM, SQL);
     /*
     * 获取 sql topic Event数据
     * */
@@ -55,18 +57,16 @@ abstract class EntrySQLHandler {
     * 将 data, header 转换为 JSON Event 格式
     * */
         Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
-            List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
-                    META_FIELD_AGENT, META_FIELD_FROM, SQL);
 
             Schema.Parser parser = new Schema.Parser();
 
-            String schemaString = Utility.getTableFieldSchema(attrList, SQL);
+            String schemaString = Utility.getTableFieldSchema(ATTR_LIST, SQL);
             Schema schema = parser.parse(schemaString);
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
 
             GenericRecord avroRecord = new GenericData.Record(schema);
 
-            for (String fieldStr: attrList) {
+            for (String fieldStr: ATTR_LIST) {
                 avroRecord.put(fieldStr, eventData.get(fieldStr));
             }
 

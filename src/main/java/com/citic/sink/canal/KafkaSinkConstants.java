@@ -18,6 +18,8 @@ public class KafkaSinkConstants {
     public static final String SCHEMA_HEADER = "schema";
     public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = "topic";
     public static final String TOPIC_OVERRIDE_HEADER = "topicHeader";
+    public static final String SCHEMA_REGISTRY_URL_NAME = "schema.registry.url";
+
 
     public static final String SCHEMA_REGISTRY_URL = KAFKA_PREFIX + "registryUrl";
     public static final String SEND_ERROR_FILE = KAFKA_PREFIX + "sendErrorFile";
@@ -26,15 +28,20 @@ public class KafkaSinkConstants {
     public static final String ALLOW_TOPIC_OVERRIDE_HEADER = "allowTopicOverride";
     public static final boolean DEFAULT_ALLOW_TOPIC_OVERRIDE_HEADER = true;
 
-    public static final String AVRO_EVENT = "useFlumeEventFormat";
-    public static final boolean DEFAULT_AVRO_EVENT = false;
+    public static final String AVRO_EVENT = "useAvroEventFormat";
+    public static final boolean DEFAULT_AVRO_EVENT = true;
 
     public static final String PARTITION_HEADER_NAME = "partitionIdHeader";
     public static final String STATIC_PARTITION_CONF = "defaultPartitionId";
 
     public static final String DEFAULT_KEY_SERIALIZER =
-            "io.confluent.kafka.serializers.KafkaAvroSerializer";
+            "org.apache.kafka.common.serialization.StringSerializer";
     public static final String DEFAULT_VALUE_SERIAIZER =
+            "org.apache.kafka.common.serialization.ByteArraySerializer";
+
+    public static final String AVRO_KEY_SERIALIZER =
+            "io.confluent.kafka.serializers.KafkaAvroSerializer";
+    public static final String AVRO_VALUE_SERIAIZER =
             "io.confluent.kafka.serializers.KafkaAvroSerializer";
 
     public static final int DEFAULT_BATCH_SIZE = 100;

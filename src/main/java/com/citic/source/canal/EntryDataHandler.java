@@ -33,7 +33,11 @@ import static com.citic.source.canal.CanalSourceConstants.*;
 
 
 abstract class EntryDataHandler {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryDataHandler.class);
+    private static final List<String> ATTR_LIST = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
+                                    META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
+
     private final CanalConf canalConf;
     private final SourceCounter tableCounter;
 
@@ -99,6 +103,11 @@ abstract class EntryDataHandler {
     abstract Event dataToEvent(Map<String, String> eventData,
                                   Map<String, String> eventHeader,
                                   String topic);
+
+    abstract void splitTableToTopicMap(String tableToTopicMap);
+
+    abstract void splitTableFieldsFilter(String tableFieldsFilter);
+
 
     /*
     * 处理 Event Header 获取数据的 topic
@@ -202,8 +211,8 @@ abstract class EntryDataHandler {
             splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }
 
-        private void splitTableToTopicMap(String tableToTopicMap) {
-            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicRegexMap cannot empty");
+         void splitTableToTopicMap(String tableToTopicMap) {
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
             // test.test:test123:schema1;test.test1:test234:schema2
             Splitter.on(';')
                     .omitEmptyStrings()
@@ -220,10 +229,9 @@ abstract class EntryDataHandler {
         /*
         * 设置表名与字段过滤对应 table
         * */
-        private void splitTableFieldsFilter(String tableFieldsFilter) {
-            if (Strings.isNullOrEmpty(tableFieldsFilter))
-                return;
-            // 这里表的顺序根据配置文件中 tableToTopicRegexMap 表的顺序
+         void splitTableFieldsFilter(String tableFieldsFilter) {
+             Preconditions.checkArgument(!Strings.isNullOrEmpty(tableFieldsFilter), "tableFieldsFilter cannot empty");
+             // 这里表的顺序根据配置文件中 tableToTopicRegexMap 表的顺序
             // id|id1,name|name1;uid|uid2,name|name2
             final int[] counter = {0};
             Splitter.on(';')
@@ -266,13 +274,10 @@ abstract class EntryDataHandler {
 
             List<String> schemaFieldList  = topicToSchemaFields.get(topic);
 
-            List<String> attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS, META_FIELD_DB,
-                    META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
-
             String schemaName = topicToSchemaMap.get(topic);
 
             Schema.Parser parser = new Schema.Parser();
-            String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, attrList), schemaName);
+            String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, ATTR_LIST), schemaName);
             Schema schema = parser.parse(schemaString);
 
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
@@ -283,7 +288,7 @@ abstract class EntryDataHandler {
                 avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
             }
 
-            for (String fieldStr: attrList) {
+            for (String fieldStr: ATTR_LIST) {
                 avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
             }
 
@@ -291,6 +296,9 @@ abstract class EntryDataHandler {
 
             // 用于sink解析
             eventHeader.put(HEADER_SCHEMA, schemaString);
+            LOGGER.debug("event data: {}", avroRecord);
+            LOGGER.debug("event header: {}", eventHeader);
+
             return EventBuilder.withBody(eventBody,eventHeader);
         }
     }
@@ -299,15 +307,81 @@ abstract class EntryDataHandler {
         private static final Gson GSON = new Gson();
         private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
 
+        // topic list
+        private final List<String> topicAppendList = Lists.newArrayList();
+
+        // topic -> table fields list
+        private final Map<String, List<String>> topicToTableFields = Maps.newHashMap();
+
         Json(CanalConf canalConf, SourceCounter tableCounter) {
             super(canalConf, tableCounter);
+            splitTableToTopicMap(canalConf.getTableToTopicMap());
+            splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }
 
         @Override
         Event dataToEvent(Map<String, String> eventData, Map<String, String> eventHeader,
                           String topic) {
-            byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+
+            List<String> tableFields = topicToTableFields.get(topic);
+            byte[] eventBody;
+
+            if (tableFields != null && tableFields.size() > 0) {
+                Map<String, String> filterTableData = Maps.newHashMap();
+
+                ListUtils.union(tableFields, ATTR_LIST).forEach(fieldName -> {
+                    filterTableData.put((String) fieldName, eventData.getOrDefault(fieldName,""));
+                });
+                eventBody = GSON.toJson(filterTableData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+
+                LOGGER.debug("event data: {}", filterTableData);
+            } else {
+                eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+                LOGGER.debug("event data: {}", eventData);
+            }
+
+
+            LOGGER.debug("event header: {}", eventHeader);
             return EventBuilder.withBody(eventBody,eventHeader);
+        }
+
+        @Override
+        void splitTableToTopicMap(String tableToTopicMap) {
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
+            // test.test:test123;test.test1:test234
+            Splitter.on(';')
+                    .omitEmptyStrings()
+                    .trimResults()
+                    .split(tableToTopicMap)
+                    .forEach(item ->{
+                        String[] result =  item.split(":");
+                        topicAppendList.add(result[1].trim());
+                    });
+        }
+
+        @Override
+        void splitTableFieldsFilter(String tableFieldsFilter) {
+            /*
+            * tableFieldsFilter 这里的值可以空,空表示不对字段进行过滤
+            * 这里表的顺序根据配置文件中 tableToTopicMap 表的顺序
+            * id,name;uid,name
+            * */
+            final int[] counter = {0};
+            Splitter.on(';')
+                    .omitEmptyStrings()
+                    .trimResults()
+                    .split(tableFieldsFilter)
+                    .forEach(item -> {
+                        String topic = topicAppendList.get(counter[0]);
+                        counter[0] += 1;
+
+                        Iterable<String> fieldsList =  Splitter.on(",")
+                                .omitEmptyStrings()
+                                .trimResults()
+                                .split(item);
+                        List<String> tableFields = Lists.newArrayList(fieldsList);
+                        topicToTableFields.put(topic, tableFields);
+                    });
         }
     }
 

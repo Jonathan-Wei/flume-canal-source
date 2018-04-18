@@ -186,7 +186,12 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
                 Integer partitionId = null;
                 try {
-                    GenericRecord avroRecord = serializeEvent(event, headers.get(SCHEMA_HEADER));
+                    Object dataRecord;
+                    if (useAvroEventFormat) {
+                        dataRecord = serializeAvroEvent(event, headers.get(SCHEMA_HEADER));
+                    } else {
+                        dataRecord = serializeJsonEvent(event);
+                    }
 
                     ProducerRecord<Object, Object> record;
                     if (staticPartitionId != null) {
@@ -201,12 +206,12 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     }
                     if (partitionId != null) {
                         record = new ProducerRecord<Object, Object>(eventTopic, partitionId, eventKey,
-                                avroRecord);
+                                dataRecord);
                     } else {
                         record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
-                                avroRecord);
+                                dataRecord);
                     }
-                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, avroRecord, kafkaSendErrorFile)));
+                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord, kafkaSendErrorFile)));
                 } catch (NumberFormatException ex) {
                     throw new EventDeliveryException("Non integer partition id specified", ex);
                 } catch (Exception ex) {
@@ -325,15 +330,13 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
 
         kafkaFutures = new LinkedList<Future<RecordMetadata>>();
-
-        String registryUrl  = context.getString(KafkaSinkConstants.SCHEMA_REGISTRY_URL);
         String bootStrapServers = context.getString(BOOTSTRAP_SERVERS_CONFIG);
 
         if (bootStrapServers == null || bootStrapServers.isEmpty()) {
             throw new ConfigurationException("Bootstrap Servers must be specified");
         }
 
-        setProducerProps(context, bootStrapServers, registryUrl);
+        setProducerProps(context, bootStrapServers);
 
         if (logger.isDebugEnabled() && LogPrivacyUtil.allowLogPrintConfig()) {
             logger.debug("Kafka producer properties: {}", kafkaProps);
@@ -403,15 +406,25 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
     }
 
-    private void setProducerProps(Context context, String bootStrapServers, String registryUrl) {
+    private void setProducerProps(Context context, String bootStrapServers) {
         kafkaProps.clear();
         kafkaProps.put(ProducerConfig.ACKS_CONFIG, DEFAULT_ACKS);
-        //Defaults overridden based on config
-        kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
-        kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIAIZER);
 
+        boolean useAvro = context.getBoolean(KafkaSinkConstants.AVRO_EVENT,
+                KafkaSinkConstants.DEFAULT_AVRO_EVENT);
 
-        kafkaProps.put("schema.registry.url", registryUrl);
+        if (useAvro) {
+            //Defaults overridden based on config
+            kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, AVRO_KEY_SERIALIZER);
+            kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, AVRO_VALUE_SERIAIZER);
+
+            String registryUrl  = context.getString(KafkaSinkConstants.SCHEMA_REGISTRY_URL);
+            kafkaProps.put(SCHEMA_REGISTRY_URL_NAME, registryUrl);
+        } else {
+            //Defaults overridden based on config
+            kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
+            kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, DEFAULT_VALUE_SERIAIZER);
+        }
 
         kafkaProps.putAll(context.getSubProperties(KAFKA_PRODUCER_PREFIX));
         kafkaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootStrapServers);
@@ -421,7 +434,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return kafkaProps;
     }
 
-    private GenericRecord serializeEvent(Event event, String schemaString) throws IOException {
+    private GenericRecord serializeAvroEvent(Event event, String schemaString) throws IOException {
         byte[] bytes;
         bytes = event.getBody();
         Schema.Parser parser = new Schema.Parser();
@@ -438,6 +451,11 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return recordInjection.invert(bytes).get();
     }
 
+
+    private byte[] serializeJsonEvent(Event event) throws IOException {
+        return event.getBody();
+    }
+
     private static Map<CharSequence, CharSequence> toCharSeqMap(Map<String, String> stringMap) {
         Map<CharSequence, CharSequence> charSeqMap = new HashMap<CharSequence, CharSequence>();
         for (Map.Entry<String, String> entry : stringMap.entrySet()) {
@@ -451,10 +469,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
 class SinkCallback implements Callback {
     private static final Logger logger = LoggerFactory.getLogger(SinkCallback.class);
     private long startTime;
-    private GenericRecord record;
+    private Object record;
     private File kafkaSendErrorFile;
 
-    public SinkCallback(long startTime, GenericRecord record, File kafkaSendErrorFile) {
+    public SinkCallback(long startTime, Object record, File kafkaSendErrorFile) {
         this.record = record;
         this.startTime = startTime;
         this.kafkaSendErrorFile = kafkaSendErrorFile;
@@ -464,12 +482,12 @@ class SinkCallback implements Callback {
         if (exception != null) {
             logger.debug("Error sending message to Kafka {} ", exception.getMessage());
 
-            try {
-                String jsonString = Utility.avroToJson(this.record);
-                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
-            } catch (IOException e) {
-                logger.debug("Error write message to error file {} ", e.getMessage());
-            }
+//            try {
+//                String jsonString = Utility.avroToJson(this.record);
+//                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
+//            } catch (IOException e) {
+//                logger.debug("Error write message to error file {} ", e.getMessage());
+//            }
         }
 
         if (logger.isDebugEnabled()) {
