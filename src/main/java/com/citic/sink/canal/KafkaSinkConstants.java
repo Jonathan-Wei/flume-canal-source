@@ -23,6 +23,7 @@ public class KafkaSinkConstants {
 
     public static final String SCHEMA_REGISTRY_URL = KAFKA_PREFIX + "registryUrl";
     public static final String SEND_ERROR_FILE = KAFKA_PREFIX + "sendErrorFile";
+    public static final String SEND_ERROR_FILE_DEFAULT = "logs/send-error.log";
 
 
     public static final String ALLOW_TOPIC_OVERRIDE_HEADER = "allowTopicOverride";

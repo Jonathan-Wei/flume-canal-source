@@ -1,6 +1,7 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
 import com.google.common.base.Preconditions;
@@ -284,12 +285,10 @@ abstract class EntryDataHandler {
                                       String topic) {
 
             List<String> schemaFieldList  = topicToSchemaFields.get(topic);
-
             String schemaName = topicToSchemaMap.get(topic);
-
-            Schema.Parser parser = new Schema.Parser();
             String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, ATTR_LIST), schemaName);
-            Schema schema = parser.parse(schemaString);
+
+            Schema schema = SchemaCache.getSchema(schemaString);
 
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
             GenericRecord avroRecord = new GenericData.Record(schema);

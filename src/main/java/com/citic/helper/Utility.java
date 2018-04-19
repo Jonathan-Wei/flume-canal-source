@@ -75,7 +75,7 @@ public class Utility {
     /*
     * avro Record to json string
     * */
-    public static String avroToJson(GenericRecord avroRecord) throws IOException {
+    public static String avroToJson(GenericRecord avroRecord) {
         JsonEncoder encoder;
         ByteArrayOutputStream output = null;
         try {
@@ -87,6 +87,9 @@ public class Utility {
             encoder.flush();
             output.flush();
             return new String(output.toByteArray());
+        } catch (IOException e) {
+            LOGGER.error("avroToJson error, avroRecord: {}", avroRecord, e);
+            return "invalid avro record";
         } finally {
             try { if (output != null) output.close(); } catch (Exception ignored) { }
         }

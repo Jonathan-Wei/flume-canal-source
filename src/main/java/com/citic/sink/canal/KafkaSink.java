@@ -1,16 +1,16 @@
 package com.citic.sink.canal;
 
 
+import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
-import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
+import com.google.common.base.*;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.EncoderFactory;
@@ -100,8 +100,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private boolean allowTopicOverride;
     private String topicHeader = null;
     private File kafkaSendErrorFile ;
-    private Map<String, Schema> schemaCache = Maps.newHashMap() ;
-
 
     private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
             Optional.absent();
@@ -186,15 +184,15 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 long startTime = System.currentTimeMillis();
 
                 Integer partitionId = null;
+                Object dataRecord = null;
+                ProducerRecord<Object, Object> record;
                 try {
-                    Object dataRecord;
                     if (useAvroEventFormat) {
                         dataRecord = serializeAvroEvent(event, headers.get(SCHEMA_HEADER));
                     } else {
                         dataRecord = serializeJsonEvent(event);
                     }
 
-                    ProducerRecord<Object, Object> record;
                     if (staticPartitionId != null) {
                         partitionId = staticPartitionId;
                     }
@@ -212,16 +210,25 @@ public class KafkaSink extends AbstractSink implements Configurable {
                         record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
                                 dataRecord);
                     }
-                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord, useAvroEventFormat,
-                            kafkaSendErrorFile)));
+                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord)));
                 } catch (NumberFormatException ex) {
                     throw new EventDeliveryException("Non integer partition id specified", ex);
                 } catch (Exception ex) {
                     // N.B. The producer.send() method throws all sorts of RuntimeExceptions
                     // Catching Exception here to wrap them neatly in an EventDeliveryException
                     // which is what our consumers will expect
-                    throw new EventDeliveryException("Could not send event", ex);
+                    // 如果是avro 格式,对异常进行处理
+                    if (useAvroEventFormat) {
+                        logger.error("Could not send event", ex);
+                        handleErrorData(dataRecord);
+                        record = buildAlertInfoRecord(eventTopic, headers.get(SCHEMA_HEADER),
+                                ex.getMessage(), (GenericRecord) dataRecord);
+                        kafkaFutures.add(producer.send(record));
+                    } else {
+                         throw new EventDeliveryException("Could not send event", ex);
+                    }
                 }
+
             }
 
             //Prevent linger.ms from holding the batch
@@ -349,13 +356,12 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
 
         if (kafkaSendErrorFile == null) {
-            String fileName = context.getString(KafkaSinkConstants.SEND_ERROR_FILE);
+            String fileName = context.getString(KafkaSinkConstants.SEND_ERROR_FILE, SEND_ERROR_FILE_DEFAULT);
             kafkaSendErrorFile = new File(fileName);
         }
     }
 
     private void translateOldProps(Context ctx) {
-
         if (!(ctx.containsKey(TOPIC_CONFIG))) {
             ctx.put(TOPIC_CONFIG, ctx.getString("topic"));
             logger.warn("{} is deprecated. Please use the parameter {}", "topic", TOPIC_CONFIG);
@@ -439,16 +445,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private GenericRecord serializeAvroEvent(Event event, String schemaString) throws IOException {
         byte[] bytes;
         bytes = event.getBody();
-        Schema.Parser parser = new Schema.Parser();
 
-        Schema schema;
-        if (schemaCache.containsKey(schemaString)) {
-            schema = schemaCache.get(schemaString);
-        } else {
-            schema  = parser.parse(schemaString);
-            schemaCache.put(schemaString, schema);
-        }
-
+        Schema schema = SchemaCache.getSchema(schemaString);
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
         return recordInjection.invert(bytes).get();
     }
@@ -458,54 +456,66 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return event.getBody();
     }
 
-    private static Map<CharSequence, CharSequence> toCharSeqMap(Map<String, String> stringMap) {
-        Map<CharSequence, CharSequence> charSeqMap = new HashMap<CharSequence, CharSequence>();
-        for (Map.Entry<String, String> entry : stringMap.entrySet()) {
-            charSeqMap.put(entry.getKey(), entry.getValue());
+    private void handleErrorData(Object dataRecord) {
+        if (dataRecord == null)
+            return;
+        try {
+            String jsonString;
+            if (useAvroEventFormat) {
+                jsonString = Utility.avroToJson((GenericRecord)dataRecord);
+            } else {
+                jsonString = new String((byte[])dataRecord, Charset.forName("UTF-8"));
+            }
+            Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
+        } catch (IOException e) {
+            logger.error("Error when write message to error file", e);
         }
-        return charSeqMap;
     }
 
-}
+    private ProducerRecord<Object, Object> buildAlertInfoRecord(String eventTopic, String eventSchemaString,
+                                         String exceptionInfo, GenericRecord dataRecord) {
+        List<String> fieldList = Lists.newArrayList("event_topic", "event_schema", "exception", "event_data");
+        String schemaString = Utility.getTableFieldSchema(fieldList, "alter_info");
 
-class SinkCallback implements Callback {
-    private static final Logger logger = LoggerFactory.getLogger(SinkCallback.class);
-    private final long startTime;
-    private final Object record;
-    private final File kafkaSendErrorFile;
-    private final boolean useAvroEventFormat;
+        Schema schema = SchemaCache.getSchema(schemaString);
+        GenericRecord avroRecord = new GenericData.Record(schema);
+        avroRecord.put("event_topic", eventTopic);
+        avroRecord.put("event_schema", eventSchemaString);
+        avroRecord.put("exception", exceptionInfo);
+        avroRecord.put("event_data", Utility.avroToJson(dataRecord));
 
-    SinkCallback(long startTime, Object record, boolean useAvroEventFormat, File kafkaSendErrorFile) {
-        this.record = record;
-        this.startTime = startTime;
-        this.kafkaSendErrorFile = kafkaSendErrorFile;
-        this.useAvroEventFormat = useAvroEventFormat;
+        String alterTopic = "avro_error_alert";
+
+        return new ProducerRecord<Object, Object>(alterTopic,avroRecord);
     }
 
-    public void onCompletion(RecordMetadata metadata, Exception exception) {
-        if (exception != null) {
-            logger.debug("Error sending message to Kafka {} ", exception.getMessage());
+    private class SinkCallback implements Callback {
+        private final long startTime;
+        private final Object record;
 
-            try {
-                String jsonString;
-                if (this.useAvroEventFormat) {
-                    jsonString = Utility.avroToJson((GenericRecord)this.record);
-                } else {
-                    jsonString = new String((byte[])this.record, Charset.forName("UTF-8"));
+        SinkCallback(long startTime, Object record) {
+            this.record = record;
+            this.startTime = startTime;
+        }
+
+        public void onCompletion(RecordMetadata metadata, Exception exception) {
+            if (exception != null) {
+                logger.debug("Error sending message to Kafka {} ", exception.getMessage());
+                handleErrorData(this.record);
+            }
+
+            if (logger.isDebugEnabled()) {
+                long eventElapsedTime = System.currentTimeMillis() - startTime;
+                if (metadata != null) {
+                    logger.debug("Acked message partition:{} ofset:{}", metadata.partition(),
+                            metadata.offset());
                 }
-                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
-            } catch (IOException e) {
-                logger.debug("Error write message to error file {} ", e.getMessage());
+                logger.debug("Elapsed time for send: {}", eventElapsedTime);
             }
-        }
-
-        if (logger.isDebugEnabled()) {
-            long eventElapsedTime = System.currentTimeMillis() - startTime;
-            if (metadata != null) {
-                logger.debug("Acked message partition:{} ofset:{}", metadata.partition(),
-                        metadata.offset());
-            }
-            logger.debug("Elapsed time for send: {}", eventElapsedTime);
         }
     }
+
+
 }
+
+
