@@ -52,10 +52,17 @@ public class KafkaSinkConstants {
   /* Old Properties */
 
   /* Properties */
-
     public static final String OLD_BATCH_SIZE = "batchSize";
     public static final String MESSAGE_SERIALIZER_KEY = "serializer.class";
     public static final String KEY_SERIALIZER_KEY = "key.serializer.class";
     public static final String BROKER_LIST_FLUME_KEY = "brokerList";
     public static final String REQUIRED_ACKS_FLUME_KEY = "requiredAcks";
+
+
+    public static final String ALERT_EVENT_TOPIC  = "event_topic";
+    public static final String ALERT_EXCEPTION  = "exception";
+    public static final String ALERT_EVENT_DATA  = "event_data";
+    public static final String ALERT_SCHEMA_NAME  = "alter_info";
+    public static final String ALERT_TOPIC  = "avro_error_alert";
+
 }

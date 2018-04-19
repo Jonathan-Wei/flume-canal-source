@@ -221,8 +221,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     if (useAvroEventFormat) {
                         logger.error("Could not send event", ex);
                         handleErrorData(dataRecord);
-                        record = buildAlertInfoRecord(eventTopic, headers.get(SCHEMA_HEADER),
-                                ex.getMessage(), (GenericRecord) dataRecord);
+                        record = buildAlertInfoRecord(eventTopic, ex.getMessage(), (GenericRecord) dataRecord);
                         kafkaFutures.add(producer.send(record));
                     } else {
                          throw new EventDeliveryException("Could not send event", ex);
@@ -472,21 +471,19 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
     }
 
-    private ProducerRecord<Object, Object> buildAlertInfoRecord(String eventTopic, String eventSchemaString,
+    /*
+    * 构建异常告警数据
+    * */
+    private ProducerRecord<Object, Object> buildAlertInfoRecord(String eventTopic,
                                          String exceptionInfo, GenericRecord dataRecord) {
-        List<String> fieldList = Lists.newArrayList("event_topic", "event_schema", "exception", "event_data");
-        String schemaString = Utility.getTableFieldSchema(fieldList, "alter_info");
-
+        List<String> fieldList = Lists.newArrayList(ALERT_EVENT_TOPIC, ALERT_EXCEPTION, ALERT_EVENT_DATA);
+        String schemaString = Utility.getTableFieldSchema(fieldList, ALERT_SCHEMA_NAME);
         Schema schema = SchemaCache.getSchema(schemaString);
         GenericRecord avroRecord = new GenericData.Record(schema);
-        avroRecord.put("event_topic", eventTopic);
-        avroRecord.put("event_schema", eventSchemaString);
-        avroRecord.put("exception", exceptionInfo);
-        avroRecord.put("event_data", Utility.avroToJson(dataRecord));
-
-        String alterTopic = "avro_error_alert";
-
-        return new ProducerRecord<Object, Object>(alterTopic,avroRecord);
+        avroRecord.put(ALERT_EVENT_TOPIC, eventTopic);
+        avroRecord.put(ALERT_EXCEPTION, exceptionInfo);
+        avroRecord.put(ALERT_EVENT_DATA, Utility.avroToJson(dataRecord));
+        return new ProducerRecord<Object, Object>(ALERT_TOPIC, avroRecord);
     }
 
     private class SinkCallback implements Callback {
