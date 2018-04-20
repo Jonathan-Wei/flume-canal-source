@@ -22,6 +22,10 @@ public class KafkaSinkConstants {
     public static final String SCHEMA_REGISTRY_URL_NAME = "schema.registry.url";
 
 
+    public static final String COUNT_MONITOR_INTERVAL = "countMonitorInterval";
+    public static final String DEFAULT_COUNT_MONITOR_INTERVAL = "5";
+
+
     public static final String SCHEMA_REGISTRY_URL = KAFKA_PREFIX + "registryUrl";
     public static final String SEND_ERROR_FILE = KAFKA_PREFIX + "sendErrorFile";
     public static final String SEND_ERROR_FILE_DEFAULT = "logs/send-error.log";

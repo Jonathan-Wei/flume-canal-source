@@ -100,8 +100,9 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private Integer staticPartitionId = null;
     private boolean allowTopicOverride;
     private String topicHeader = null;
-    private File kafkaSendErrorFile ;
-    private SendCountMonitor sendCountMonitor ;
+    private File kafkaSendErrorFile;
+    private SendCountMonitor sendCountMonitor;
+    private String countMonitorInterval;
 
     private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
             Optional.absent();
@@ -279,7 +280,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
         super.start();
 
         if (sendCountMonitor == null) {
-            sendCountMonitor = new SendCountMonitor(producer, kafkaFutures, useAvroEventFormat);
+            sendCountMonitor = new SendCountMonitor(producer, kafkaFutures,
+                    useAvroEventFormat, countMonitorInterval);
         }
         sendCountMonitor.start();
     }
@@ -310,7 +312,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
      */
     @Override
     public void configure(Context context) {
-
         translateOldProps(context);
 
         String topicStr = context.getString(TOPIC_CONFIG);
@@ -367,6 +368,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
             String fileName = context.getString(KafkaSinkConstants.SEND_ERROR_FILE, SEND_ERROR_FILE_DEFAULT);
             kafkaSendErrorFile = new File(fileName);
         }
+
+        countMonitorInterval = context.getString(COUNT_MONITOR_INTERVAL, DEFAULT_COUNT_MONITOR_INTERVAL);
     }
 
     private void translateOldProps(Context ctx) {
