@@ -16,7 +16,13 @@
  */
 package com.citic.source.canal;
 
-class CanalSourceConstants {
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.Map;
+
+public class CanalSourceConstants {
     static final String IP_INTERFACE = "ipInterface";
 
     static final String ZOOKEEPER_SERVERS = "zkServers";
@@ -39,10 +45,6 @@ class CanalSourceConstants {
 
     static final String SOURCE_TABLES_COUNTER = "SourceTables";
 
-    static final String HEADER_TOPIC = "topic";
-    static final String HEADER_SCHEMA = "schema";
-    static final String HEADER_KEY = "key";
-
     static final String META_FIELD_TABLE = "__table";
     static final String META_FIELD_TS = "__ts";
     static final String META_FIELD_DB = "__db";
@@ -50,4 +52,8 @@ class CanalSourceConstants {
     static final String META_FIELD_AGENT = "__agent";
     static final String META_FIELD_FROM = "__from";
     static final String META_FIELD_SQL = "__sql";
+
+
+    public static final Gson GSON = new Gson();
+    public static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
 }

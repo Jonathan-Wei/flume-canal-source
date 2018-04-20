@@ -2,7 +2,10 @@ package com.citic.helper;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
@@ -21,6 +24,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 public class Utility {
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
@@ -93,5 +97,19 @@ public class Utility {
         } finally {
             try { if (output != null) output.close(); } catch (Exception ignored) { }
         }
+    }
+
+    public static byte[] dataToAvroEventBody(Map<String, String> eventData,
+                                             List<String> fieldList,
+                                             String schemaString) {
+        Schema schema = SchemaCache.getSchema(schemaString);
+        GenericRecord avroRecord = new GenericData.Record(schema);
+
+        for (String fieldStr: fieldList) {
+            avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
+        }
+
+        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+        return recordInjection.apply(avroRecord);
     }
 }

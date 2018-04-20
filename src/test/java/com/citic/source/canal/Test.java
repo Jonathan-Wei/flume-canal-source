@@ -2,6 +2,9 @@ package com.citic.source.canal;
 
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -28,10 +31,19 @@ public class Test {
 //        }
 
 
-        String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss")
-//                .format(new Date(Long.parseLong("1524136724014")));
-                .format(new Date(Long.parseLong("232323")));
-        System.out.println(timeStamp);
+//        String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss")
+////                .format(new Date(Long.parseLong("1524136724014")));
+//                .format(new Date("2018-09-01 12:13"));
+//        System.out.println(timeStamp);
+
+        Long.parseLong("erer");
+
+        DateTimeFormatter f = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+        DateTime dateTime = f.parseDateTime("2012-01-10 23:13:23");
+
+        String timeKey = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                .format(dateTime.toDate());
+        System.out.println(timeKey);
 
 
 //        LoadingCache<String, Counter> graphs = CacheBuilder.newBuilder()

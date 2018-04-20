@@ -1,6 +1,7 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -20,6 +21,8 @@ import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 
+import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER;
+import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_HEADER;
 import static com.citic.source.canal.CanalSourceConstants.*;
 
 interface EntrySQLHandlerInterface {
@@ -41,7 +44,7 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
     public Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
         Map<String, String> eventSql = handleSQL(sql, entryHeader, canalConf);
         Map<String, String> sqlHeader = Maps.newHashMap();
-        sqlHeader.put(HEADER_TOPIC, sql_topic_name);
+        sqlHeader.put(DEFAULT_TOPIC_OVERRIDE_HEADER, sql_topic_name);
         return dataToSQLEvent(eventSql, sqlHeader);
     }
 
@@ -69,26 +72,13 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         }
 
         /*
-            * 将 data, header 转换为 JSON Event 格式
-            * */
+        * 将 data, header 转换为 JSON Event 格式
+        * */
         Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
-
-            Schema.Parser parser = new Schema.Parser();
-
             String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_SQL_TOPIC);
-            Schema schema = parser.parse(schemaString);
-            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-
-            GenericRecord avroRecord = new GenericData.Record(schema);
-
-            for (String fieldStr: ATTR_LIST) {
-                avroRecord.put(fieldStr, eventData.get(fieldStr));
-            }
-
-            byte[] eventBody = recordInjection.apply(avroRecord);
-
+            byte[] eventBody = Utility.dataToAvroEventBody(eventData, ATTR_LIST, schemaString);
             // 用于sink解析
-            eventHeader.put(HEADER_SCHEMA, schemaString);
+            eventHeader.put(SCHEMA_HEADER, schemaString);
             return EventBuilder.withBody(eventBody,eventHeader);
         }
     }

@@ -1,6 +1,7 @@
 package com.citic.sink.canal;
 
 
+import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.*;
@@ -100,6 +101,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private boolean allowTopicOverride;
     private String topicHeader = null;
     private File kafkaSendErrorFile ;
+    private SendCountMonitor sendCountMonitor ;
 
     private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
             Optional.absent();
@@ -275,6 +277,11 @@ public class KafkaSink extends AbstractSink implements Configurable {
         producer = new KafkaProducer<Object, Object>(kafkaProps);
         counter.start();
         super.start();
+
+        if (sendCountMonitor == null) {
+            sendCountMonitor = new SendCountMonitor(producer, kafkaFutures, useAvroEventFormat);
+        }
+        sendCountMonitor.start();
     }
 
     @Override
@@ -283,6 +290,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
         counter.stop();
         logger.info("Kafka Sink {} stopped. Metrics: {}", getName(), counter);
         super.stop();
+
+        sendCountMonitor.stop();
     }
 
 
@@ -455,7 +464,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return event.getBody();
     }
 
-    void handleErrorData(Object dataRecord) {
+    private void handleErrorData(Object dataRecord) {
         if (dataRecord == null)
             return;
         try {

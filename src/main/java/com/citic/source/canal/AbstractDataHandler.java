@@ -1,6 +1,7 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.citic.instrumentation.SourceCounter;
@@ -30,6 +31,7 @@ import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 
+import static com.citic.sink.canal.KafkaSinkConstants.*;
 import static com.citic.source.canal.CanalSourceConstants.*;
 
 interface DataHandlerInterface {
@@ -91,11 +93,15 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         LOGGER.debug("eventData handleRowData:{}", eventData);
         try {
             // 监控表数据
-            tableCounter.incrementTableReceivedCount(keyName);
+             tableCounter.incrementTableReceivedCount(keyName);
         } catch (Exception e) {
             LOGGER.error("table name:{}, attributes:{}", keyName, tableCounter.getAttributes());
             LOGGER.error(e.getMessage());
         }
+
+        String timeKey = FlowCounter.getTimePeriodKey(topic, "update_time", eventData);
+        if (timeKey != null)
+            FlowCounter.incrementByKey(timeKey);
 
         String pk = getPK(rowData);
         // 处理 event Header
@@ -121,9 +127,9 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         Map<String, String> header = Maps.newHashMap();
         if (kafkaKey != null){
             // 将表的主键作为kafka分区的key
-            header.put(HEADER_KEY, kafkaKey);
+            header.put(KEY_HEADER, kafkaKey);
         }
-        header.put(HEADER_TOPIC, topic);
+        header.put(DEFAULT_TOPIC_OVERRIDE_HEADER, topic);
         return header;
     }
 
@@ -309,7 +315,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             byte[] eventBody = recordInjection.apply(avroRecord);
 
             // 用于sink解析
-            eventHeader.put(HEADER_SCHEMA, schemaString);
+            eventHeader.put(SCHEMA_HEADER, schemaString);
             LOGGER.debug("event data: {}", avroRecord);
             LOGGER.debug("event header: {}", eventHeader);
 
@@ -318,8 +324,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     }
 
     static class Json extends AbstractDataHandler {
-        private static final Gson GSON = new Gson();
-        private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
 
         // topic list
         private final List<String> topicAppendList = Lists.newArrayList();
@@ -353,7 +357,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                 eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
                 LOGGER.debug("event data: {}", eventData);
             }
-
 
             LOGGER.debug("event header: {}", eventHeader);
             return EventBuilder.withBody(eventBody,eventHeader);
