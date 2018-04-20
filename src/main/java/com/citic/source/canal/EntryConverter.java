@@ -30,16 +30,16 @@ import java.util.List;
 class EntryConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
 
-    private final EntrySQLHandler sqlHandler;
-    private final EntryDataHandler dataHandler;
+    private final EntrySQLHandlerInterface sqlHandler;
+    private final DataHandlerInterface dataHandler;
 
     EntryConverter(boolean useAvro, CanalConf canalConf, SourceCounter tableCounter) {
         if (useAvro) {
-            this.sqlHandler = new EntrySQLHandler.Avro();
-            this.dataHandler = new EntryDataHandler.Avro(canalConf, tableCounter);
+            this.sqlHandler = new AbstractEntrySQLHandler.Avro();
+            this.dataHandler = new AbstractDataHandler.Avro(canalConf, tableCounter);
         } else {
-            this.sqlHandler = new EntrySQLHandler.Json();
-            this.dataHandler = new EntryDataHandler.Json(canalConf, tableCounter);
+            this.sqlHandler = new AbstractEntrySQLHandler.Json();
+            this.dataHandler = new AbstractDataHandler.Json(canalConf, tableCounter);
         }
 
     }

@@ -210,7 +210,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                         record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
                                 dataRecord);
                     }
-                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord)));
+                    kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord, this)));
                 } catch (NumberFormatException ex) {
                     throw new EventDeliveryException("Non integer partition id specified", ex);
                 } catch (Exception ex) {
@@ -455,7 +455,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return event.getBody();
     }
 
-    private void handleErrorData(Object dataRecord) {
+    void handleErrorData(Object dataRecord) {
         if (dataRecord == null)
             return;
         try {
@@ -486,19 +486,21 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return new ProducerRecord<Object, Object>(ALERT_TOPIC, avroRecord);
     }
 
-    private class SinkCallback implements Callback {
+    private static class SinkCallback implements Callback {
         private final long startTime;
         private final Object record;
+        private final KafkaSink kafkaSink;
 
-        SinkCallback(long startTime, Object record) {
+        SinkCallback(long startTime, Object record, KafkaSink kafkaSink) {
             this.record = record;
             this.startTime = startTime;
+            this.kafkaSink = kafkaSink;
         }
 
         public void onCompletion(RecordMetadata metadata, Exception exception) {
             if (exception != null) {
                 logger.debug("Error sending message to Kafka {} ", exception.getMessage());
-                handleErrorData(this.record);
+                kafkaSink.handleErrorData(this.record);
             }
 
             if (logger.isDebugEnabled()) {

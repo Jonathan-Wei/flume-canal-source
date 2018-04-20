@@ -22,19 +22,23 @@ import java.util.Map;
 
 import static com.citic.source.canal.CanalSourceConstants.*;
 
-abstract class EntrySQLHandler {
+interface EntrySQLHandlerInterface {
+    Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf);
+}
+
+abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
     private static final List<String> ATTR_LIST = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
             META_FIELD_DB, META_FIELD_AGENT, META_FIELD_FROM, META_FIELD_SQL);
     private final String sql_topic_name;
 
-    private EntrySQLHandler(String sql_topic_name) {
+    private AbstractEntrySQLHandler(String sql_topic_name) {
         this.sql_topic_name = sql_topic_name;
     }
 
     /*
     * 获取 sql topic Event数据
     * */
-    Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
+    public Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
         Map<String, String> eventSql = handleSQL(sql, entryHeader, canalConf);
         Map<String, String> sqlHeader = Maps.newHashMap();
         sqlHeader.put(HEADER_TOPIC, sql_topic_name);
@@ -57,7 +61,7 @@ abstract class EntrySQLHandler {
         return eventMap;
     }
 
-    static class Avro extends EntrySQLHandler {
+    static class Avro extends AbstractEntrySQLHandler {
         private static final String AVRO_SQL_TOPIC = "avro_ddl_sql";
 
         Avro() {
@@ -89,7 +93,7 @@ abstract class EntrySQLHandler {
         }
     }
 
-    static class Json extends EntrySQLHandler {
+    static class Json extends AbstractEntrySQLHandler {
         private static final Gson GSON = new Gson();
         private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
         private static final String AVRO_SQL_TOPIC = "json_ddl_sql";

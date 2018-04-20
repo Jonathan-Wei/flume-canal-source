@@ -32,17 +32,21 @@ import java.util.Map;
 
 import static com.citic.source.canal.CanalSourceConstants.*;
 
+interface DataHandlerInterface {
+    Event getDataEvent(CanalEntry.RowData rowData,
+                       CanalEntry.Header entryHeader,
+                       CanalEntry.EventType eventType);
+}
 
-abstract class EntryDataHandler {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(EntryDataHandler.class);
+abstract class AbstractDataHandler implements DataHandlerInterface {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
     private static final List<String> ATTR_LIST = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
                                     META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
 
     private final CanalConf canalConf;
     private final SourceCounter tableCounter;
 
-    private EntryDataHandler(CanalConf canalConf, SourceCounter tableCounter) {
+    private AbstractDataHandler(CanalConf canalConf, SourceCounter tableCounter) {
         this.canalConf = canalConf;
         this.tableCounter = tableCounter;
     }
@@ -77,7 +81,7 @@ abstract class EntryDataHandler {
     /*
     * 获取数据 Event
     * */
-    Event getDataEvent(CanalEntry.RowData rowData,
+    public Event getDataEvent(CanalEntry.RowData rowData,
                               CanalEntry.Header entryHeader,
                               CanalEntry.EventType eventType) {
         String keyName = getTableKeyName(entryHeader);
@@ -193,7 +197,7 @@ abstract class EntryDataHandler {
         return rowMap;
     }
 
-    static class Avro extends EntryDataHandler{
+    static class Avro extends AbstractDataHandler {
         // topic list
         private final List<String> topicAppendList = Lists.newArrayList();
 
@@ -313,7 +317,7 @@ abstract class EntryDataHandler {
         }
     }
 
-    static class Json extends EntryDataHandler {
+    static class Json extends AbstractDataHandler {
         private static final Gson GSON = new Gson();
         private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
 
