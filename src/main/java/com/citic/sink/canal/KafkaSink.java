@@ -1,12 +1,10 @@
 package com.citic.sink.canal;
 
 
-import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.*;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
@@ -14,10 +12,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.specific.SpecificDatumReader;
-import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.commons.collections.ListUtils;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -29,7 +23,6 @@ import org.apache.flume.conf.LogPrivacyUtil;
 import org.apache.flume.formatter.output.BucketPath;
 import org.apache.flume.instrumentation.kafka.KafkaSinkCounter;
 import org.apache.flume.sink.AbstractSink;
-import org.apache.flume.source.avro.AvroFlumeEvent;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -38,12 +31,9 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -103,13 +93,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private File kafkaSendErrorFile;
     private SendCountMonitor sendCountMonitor;
     private String countMonitorInterval;
-
-    private Optional<SpecificDatumWriter<AvroFlumeEvent>> writer =
-            Optional.absent();
-    private Optional<SpecificDatumReader<AvroFlumeEvent>> reader =
-            Optional.absent();
-    private Optional<ByteArrayOutputStream> tempOutStream = Optional
-            .absent();
 
     //Fine to use null for initial value, Avro will create new ones if this
     // is null
@@ -224,7 +207,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     if (useAvroEventFormat) {
                         logger.error("Could not send event", ex);
                         handleErrorData(dataRecord);
-                        record = buildAlertInfoRecord(eventTopic, ex.getMessage(), (GenericRecord) dataRecord);
+                        record = buildAlertInfoRecord(eventTopic, ex.getMessage(), dataRecord);
                         kafkaFutures.add(producer.send(record));
                     } else {
                          throw new EventDeliveryException("Could not send event", ex);
@@ -243,7 +226,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 }
                 long endTime = System.nanoTime();
                 counter.addToKafkaEventSendTimer((endTime - batchStartTime) / (1000 * 1000));
-                counter.addToEventDrainSuccessCount(Long.valueOf(kafkaFutures.size()));
+                counter.addToEventDrainSuccessCount((long) kafkaFutures.size());
             }
 
             transaction.commit();
@@ -487,15 +470,15 @@ public class KafkaSink extends AbstractSink implements Configurable {
     * 构建异常告警数据
     * */
     private ProducerRecord<Object, Object> buildAlertInfoRecord(String eventTopic,
-                                         String exceptionInfo, GenericRecord dataRecord) {
+                                         String exceptionInfo, Object dataRecord) {
         List<String> fieldList = Lists.newArrayList(ALERT_EVENT_TOPIC, ALERT_EXCEPTION, ALERT_EVENT_DATA);
         String schemaString = Utility.getTableFieldSchema(fieldList, ALERT_SCHEMA_NAME);
         Schema schema = SchemaCache.getSchema(schemaString);
         GenericRecord avroRecord = new GenericData.Record(schema);
         avroRecord.put(ALERT_EVENT_TOPIC, eventTopic);
         avroRecord.put(ALERT_EXCEPTION, exceptionInfo);
-        avroRecord.put(ALERT_EVENT_DATA, Utility.avroToJson(dataRecord));
-        return new ProducerRecord<Object, Object>(ALERT_TOPIC, avroRecord);
+        avroRecord.put(ALERT_EVENT_DATA, Utility.avroToJson((GenericRecord) dataRecord));
+        return new ProducerRecord<>(ALERT_TOPIC, avroRecord);
     }
 
     private static class SinkCallback implements Callback {

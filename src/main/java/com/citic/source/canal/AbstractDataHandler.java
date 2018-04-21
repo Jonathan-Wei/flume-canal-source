@@ -301,7 +301,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             @SuppressWarnings("unchecked")
             String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, ATTR_LIST), schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
-            
+
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
             GenericRecord avroRecord = new GenericData.Record(schema);
 
