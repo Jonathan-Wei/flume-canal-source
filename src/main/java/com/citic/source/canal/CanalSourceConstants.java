@@ -38,6 +38,9 @@ public class CanalSourceConstants {
 
     static final String USE_AVRO = "useAvro";
 
+    static final String TIMESTAMP_FIELD_NAME = "timestampFieldName";
+    static final String DEFAULT_TIMESTAMP_FIELD_NAME = "update_time";
+
     static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
     static final int DEFAULT_BATCH_SIZE = 1024;
     static final String DEFAULT_USERNAME = "";

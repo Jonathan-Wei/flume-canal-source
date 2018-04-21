@@ -45,6 +45,17 @@ class CanalConf {
     private String tableToTopicMap;
     private String tableFieldsFilter;
 
+    private String timestampFieldName;
+
+
+    public String getTimestampFieldName() {
+        return timestampFieldName;
+    }
+
+    public void setTimestampFieldName(String timestampFieldName) {
+        this.timestampFieldName = timestampFieldName;
+    }
+
     // db.table -> topic
     private Map<String, String> tableToTopicRegexMap = new RegexHashMap<>();
     private List<String> filterTableList = Lists.newArrayList();

@@ -99,7 +99,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             LOGGER.error(e.getMessage());
         }
 
-        String timeKey = FlowCounter.getTimePeriodKey(topic, "update_time", eventData);
+        String timeKey = FlowCounter.getTimePeriodKey(topic, canalConf.getTimestampFieldName(), eventData);
         if (timeKey != null)
             FlowCounter.incrementByKey(timeKey);
 

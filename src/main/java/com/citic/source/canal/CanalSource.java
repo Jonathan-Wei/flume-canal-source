@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_TIMESTAMP_FIELD_NAME;
 import static com.citic.source.canal.CanalSourceConstants.SOURCE_TABLES_COUNTER;
 import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
 
@@ -60,6 +61,8 @@ public class CanalSource extends AbstractPollableSource
                 CanalSourceConstants.DEFAULT_PASSWORD));
         canalConf.setBatchSize(context.getInteger(CanalSourceConstants.BATCH_SIZE,
                 CanalSourceConstants.DEFAULT_BATCH_SIZE));
+        canalConf.setTimestampFieldName(context.getString(CanalSourceConstants.TIMESTAMP_FIELD_NAME,
+                DEFAULT_TIMESTAMP_FIELD_NAME));
         canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
         canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
     }
