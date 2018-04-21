@@ -94,10 +94,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private SendCountMonitor sendCountMonitor;
     private String countMonitorInterval;
 
-    //Fine to use null for initial value, Avro will create new ones if this
-    // is null
-    private BinaryEncoder encoder = null;
-
 
     //For testing
     public String getTopic() {
@@ -190,10 +186,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
                         }
                     }
                     if (partitionId != null) {
-                        record = new ProducerRecord<Object, Object>(eventTopic, partitionId, eventKey,
+                        record = new ProducerRecord<>(eventTopic, partitionId, eventKey,
                                 dataRecord);
                     } else {
-                        record = new ProducerRecord<Object, Object>(eventTopic, eventKey,
+                        record = new ProducerRecord<>(eventTopic, eventKey,
                                 dataRecord);
                     }
                     kafkaFutures.add(producer.send(record, new SinkCallback(startTime, dataRecord, this)));
@@ -258,7 +254,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     @Override
     public synchronized void start() {
         // instantiate the producer
-        producer = new KafkaProducer<Object, Object>(kafkaProps);
+        producer = new KafkaProducer<>(kafkaProps);
         counter.start();
         super.start();
 
@@ -330,7 +326,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
             logger.debug(KafkaSinkConstants.AVRO_EVENT + " set to: {}", useAvroEventFormat);
         }
 
-        kafkaFutures = new LinkedList<Future<RecordMetadata>>();
+        kafkaFutures = new LinkedList<>();
         String bootStrapServers = context.getString(BOOTSTRAP_SERVERS_CONFIG);
 
         if (bootStrapServers == null || bootStrapServers.isEmpty()) {
