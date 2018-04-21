@@ -296,10 +296,12 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
             List<String> schemaFieldList  = topicToSchemaFields.get(topic);
             String schemaName = topicToSchemaMap.get(topic);
+
+            // schemaFieldList and ATTR_LIST are same List<String> type
+            @SuppressWarnings("unchecked")
             String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, ATTR_LIST), schemaName);
-
             Schema schema = SchemaCache.getSchema(schemaString);
-
+            
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
             GenericRecord avroRecord = new GenericData.Record(schema);
 
@@ -347,7 +349,10 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             if (tableFields != null && tableFields.size() > 0) {
                 Map<String, String> filterTableData = Maps.newHashMap();
 
-                ListUtils.union(tableFields, ATTR_LIST).forEach(fieldName -> {
+                // schemaFieldList and ATTR_LIST are same List<String> type
+                @SuppressWarnings("unchecked")
+                List<String> unionList = ListUtils.union(tableFields, ATTR_LIST);
+                unionList.forEach(fieldName -> {
                     filterTableData.put((String) fieldName, eventData.getOrDefault(fieldName,""));
                 });
                 eventBody = GSON.toJson(filterTableData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
