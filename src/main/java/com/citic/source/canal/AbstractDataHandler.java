@@ -51,9 +51,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     private AbstractDataHandler(CanalConf canalConf, SourceCounter tableCounter) {
         this.canalConf = canalConf;
         this.tableCounter = tableCounter;
-
-        splitTableToTopicMap(canalConf.getTableToTopicMap());
-        splitTableFieldsFilter(canalConf.getTableFieldsFilter());
     }
 
     /*
@@ -225,6 +222,9 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
         Avro(CanalConf canalConf, SourceCounter tableCounter) {
             super(canalConf, tableCounter);
+
+            splitTableToTopicMap(canalConf.getTableToTopicMap());
+            splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }
 
          void splitTableToTopicMap(String tableToTopicMap) {
@@ -351,6 +351,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
         Json(CanalConf canalConf, SourceCounter tableCounter) {
             super(canalConf, tableCounter);
+            splitTableToTopicMap(canalConf.getTableToTopicMap());
+            splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }
 
         @Override
