@@ -20,6 +20,7 @@ package com.citic.source.canal;
 import com.alibaba.otter.canal.client.CanalConnector;
 import com.alibaba.otter.canal.client.CanalConnectors;
 import com.alibaba.otter.canal.protocol.Message;
+import com.google.common.base.Joiner;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,8 @@ class CanalClient {
 
     void start() {
         this.canalConnector.connect();
-        this.canalConnector.subscribe(canalConf.getTableFilter());
+        String filterTables = Joiner.on(",").join(canalConf.getFilterTableList());
+        this.canalConnector.subscribe(filterTables);
     }
 
     Message fetchRows(int batchSize) {

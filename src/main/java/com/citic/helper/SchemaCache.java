@@ -12,11 +12,8 @@ import java.util.Map;
  * Created by zhoupeng on 2018/4/19.
  */
 public class SchemaCache {
-    private static final LoadingCache<String, Schema> schemaCache;
     private static final Schema.Parser parser = new Schema.Parser();
-
-    static {
-        schemaCache = CacheBuilder
+    private static final LoadingCache<String, Schema> schemaCache = CacheBuilder
                 .newBuilder()
                 .maximumSize(10000)
                 .build(
@@ -26,7 +23,6 @@ public class SchemaCache {
                     return parser.parse(schemaString);
                 }
             });
-    }
 
     public static Schema getSchema(String schemaString) {
         return schemaCache.getUnchecked(schemaString);

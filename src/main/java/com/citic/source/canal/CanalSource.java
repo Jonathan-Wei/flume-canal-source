@@ -90,7 +90,7 @@ public class CanalSource extends AbstractPollableSource
 
         if (tableCounter == null) {
             tableCounter = new SourceCounter(getName() + "-" + SOURCE_TABLES_COUNTER,
-                    canalConf.getTableFilter().split(","));
+                    (String[]) canalConf.getFilterTableList().toArray());
         }
 
         entryConverter = new EntryConverter(useAvro, canalConf, tableCounter);

@@ -148,8 +148,8 @@ class CanalConf {
     /*
     * 获取需要过滤的表列表
     * */
-    String getTableFilter() {
-        return Joiner.on(",").join(filterTableList);
+    List<String> getFilterTableList() {
+        return filterTableList;
     }
 
     boolean isConnectionUrlValid() {
