@@ -51,6 +51,9 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     private AbstractDataHandler(CanalConf canalConf, SourceCounter tableCounter) {
         this.canalConf = canalConf;
         this.tableCounter = tableCounter;
+
+        splitTableToTopicMap(canalConf.getTableToTopicMap());
+        splitTableFieldsFilter(canalConf.getTableFieldsFilter());
     }
 
     /*
@@ -99,9 +102,11 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             LOGGER.error(e.getMessage());
         }
 
-        String timeKey = FlowCounter.getTimePeriodKey(topic, canalConf.getTimestampFieldName(), eventData);
-        if (timeKey != null)
-            FlowCounter.incrementByKey(timeKey);
+        String timeFieldName = this.getTimeFieldName(topic);
+        if (timeFieldName != null) {
+            String timeFieldValue = eventData.get(timeFieldName);
+            FlowCounter.increment(topic, keyName, canalConf.getFromDBIP(), timeFieldValue);
+        }
 
         String pk = getPK(rowData);
         // 处理 event Header
@@ -118,6 +123,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     abstract void splitTableToTopicMap(String tableToTopicMap);
 
     abstract void splitTableFieldsFilter(String tableFieldsFilter);
+
+    abstract String getTimeFieldName (String topic);
 
 
     /*
@@ -218,8 +225,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
         Avro(CanalConf canalConf, SourceCounter tableCounter) {
             super(canalConf, tableCounter);
-            splitTableToTopicMap(canalConf.getTableToTopicMap());
-            splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }
 
          void splitTableToTopicMap(String tableToTopicMap) {
@@ -251,6 +256,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         /*
         * 设置表名与字段过滤对应 table
         * */
+        @Override
          void splitTableFieldsFilter(String tableFieldsFilter) {
              Preconditions.checkArgument(!Strings.isNullOrEmpty(tableFieldsFilter), "tableFieldsFilter cannot empty");
              // 这里表的顺序根据配置文件中 tableToTopicRegexMap 表的顺序
@@ -287,9 +293,20 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                     });
         }
 
+        @Override
+        String getTimeFieldName(String topic) {
+            List<String> schemaFields =  topicToSchemaFields.get(topic);
+            if (schemaFields == null || schemaFields.size() == 0)
+                return null;
+            // 默认首个字段为时间字段
+            return this.topicSchemaFieldToTableField.get(topic, schemaFields.get(0));
+        }
+
+
         /*
         * 将 data, header 转换为 Avro Event 格式
         * */
+        @Override
         Event dataToEvent(Map<String, String> eventData,
                                       Map<String, String> eventHeader,
                                       String topic) {
@@ -326,7 +343,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     }
 
     static class Json extends AbstractDataHandler {
-
         // topic list
         private final List<String> topicAppendList = Lists.newArrayList();
 
@@ -335,8 +351,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
         Json(CanalConf canalConf, SourceCounter tableCounter) {
             super(canalConf, tableCounter);
-            splitTableToTopicMap(canalConf.getTableToTopicMap());
-            splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }
 
         @Override
@@ -407,6 +421,17 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                         List<String> tableFields = Lists.newArrayList(fieldsList);
                         topicToTableFields.put(topic, tableFields);
                     });
+        }
+
+        @Override
+        String getTimeFieldName(String topic) {
+            List<String> tableFields = topicToTableFields.get(topic);
+            if (tableFields == null || tableFields.size() == 0)
+                return null;
+            else
+                // 默认首个字段为时间字段
+                return tableFields.get(0);
+
         }
     }
 

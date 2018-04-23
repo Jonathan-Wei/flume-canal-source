@@ -35,13 +35,15 @@ public class FlowCounter {
     private static final String AVRO_FLOW_COUNTER_TOPIC = "avro_flow_counter";
     private static final String JSON_FLOW_COUNTER_TOPIC = "json_flow_counter";
 
-    private static final String COUNT_TOPIC = "count_topic";
-    private static final String COUNT_PERIOD = "count_period";
-    private static final String CURRENT_TIME = "current_time";
+    private static final String COUNT_TOPIC = "topic";
+    private static final String COUNT_TABLE = "table";
+    private static final String COUNT_FROM = "from";
+    private static final String COUNT_PERIOD = "period";
+    private static final String CURRENT_TIME = "ctime";
     private static final String COUNT = "count";
 
-    private static final List<String> ATTR_LIST = Lists.newArrayList(COUNT_TOPIC,COUNT_PERIOD,
-            CURRENT_TIME,COUNT);
+    private static final List<String> ATTR_LIST = Lists.newArrayList(COUNT_TOPIC,COUNT_TABLE,COUNT_FROM,
+            COUNT_PERIOD, CURRENT_TIME,COUNT);
 
     private static final Map<String, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
             .maxSize(10000)
@@ -61,14 +63,16 @@ public class FlowCounter {
     }
 
     private static ProducerRecord buildEachToEvent(String key, AtomicLong value) {
-        String[] keyArray = key.split(":");
+        String[] keyArray = key.split(";");
 
         String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_FLOW_COUNTER_TOPIC);
         Schema schema = SchemaCache.getSchema(schemaString);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
         avroRecord.put(COUNT_TOPIC, keyArray[0]);
-        avroRecord.put(COUNT_PERIOD, keyArray[1]);
+        avroRecord.put(COUNT_TABLE, keyArray[1]);
+        avroRecord.put(COUNT_FROM, keyArray[2]);
+        avroRecord.put(COUNT_PERIOD, keyArray[3]);
         avroRecord.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         avroRecord.put(COUNT, value.toString());
 
@@ -76,11 +80,14 @@ public class FlowCounter {
     }
 
     private static ProducerRecord buildEachToJsonEvent(String key, AtomicLong value) {
-        String[] keyArray = key.split(":");
+        String[] keyArray = key.split(";");
         byte[] eventBody;
         Map<String, String> eventData = Maps.newHashMap();
+
         eventData.put(COUNT_TOPIC, keyArray[0]);
-        eventData.put(COUNT_PERIOD, keyArray[1]);
+        eventData.put(COUNT_TABLE, keyArray[1]);
+        eventData.put(COUNT_FROM, keyArray[2]);
+        eventData.put(COUNT_PERIOD, keyArray[3]);
         eventData.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         eventData.put(COUNT, value.toString());
 
@@ -88,46 +95,53 @@ public class FlowCounter {
         return new ProducerRecord<Object, Object>(JSON_FLOW_COUNTER_TOPIC, eventBody);
     }
 
-    public static String getTimePeriodKey(String topic, String fieldName, Map<String, String> eventData) {
-        if (fieldName == null)
-            return null;
 
-        String fieldValue = eventData.get(fieldName);
+    public static void increment(String topic, String table, String fromDB,
+                                   String fieldValue) {
+        String timeKey = getTimePeriodKeyByValue(fieldValue);
+        String totalKey = null;
+
+        if (timeKey != null)
+            totalKey =  topic + ";" + table + ";" + fromDB + ";" + timeKey;
+
+        if (totalKey != null)
+            incrementByKey(totalKey);
+    }
+
+    private static String getTimePeriodKeyByValue(String fieldValue) {
         if (fieldValue == null)
             return null;
 
         try {
             long timeStamp = Long.parseLong(fieldValue);
-            return getTimePeriodKey(topic, timeStamp);
+            return getTimePeriodKey(timeStamp);
         } catch (NumberFormatException ex) {
             // 使用字符模式解析 时间戳
-            return getTimePeriodKey(topic, fieldValue);
+            return getTimePeriodKey(fieldValue);
         }
     }
 
-    private static String getTimePeriodKey(String topic, long timeStamp) {
-        String timeKey = new SimpleDateFormat(TIME_KEY_FORMAT).format(new Date(timeStamp));
-        return topic + ":" + timeKey;
+    private static String getTimePeriodKey(long timeStamp) {
+        return new SimpleDateFormat(TIME_KEY_FORMAT).format(new Date(timeStamp));
     }
 
 
-    private static String getTimePeriodKey(String topic, String timeStamp) {
+    private static String getTimePeriodKey(String timeStamp) {
         if (timeStamp == null)
             return null;
         DateTimeFormatter f = DateTimeFormat.forPattern(SUPPORT_TIME_FORMAT);
 
         try {
             DateTime dateTime = f.parseDateTime(timeStamp);
-            String timeKey = new SimpleDateFormat(TIME_KEY_FORMAT).format(dateTime.toDate());
 
-            return topic + ":" + timeKey;
+            return new SimpleDateFormat(TIME_KEY_FORMAT).format(dateTime.toDate());
         } catch (IllegalArgumentException ex) {
             LOGGER.error(ex.getMessage(), ex);
             return null;
         }
     }
 
-    public static long incrementByKey(String key) {
+    private static long incrementByKey(String key) {
         if (!CACHE_COUNTER.containsKey(key)) {
             CACHE_COUNTER.put(key, new AtomicLong(0));
         }
