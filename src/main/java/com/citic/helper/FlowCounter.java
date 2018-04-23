@@ -53,6 +53,8 @@ public class FlowCounter {
 
     public static List<ProducerRecord> flowCounterToEvents(boolean useAvro) {
         List<ProducerRecord> records = Lists.newArrayList();
+        LOGGER.debug("FlowCounter CACHE_COUNTER: {}", CACHE_COUNTER);
+        
         CACHE_COUNTER.forEach((key, value) -> {
             if (useAvro)
                 records.add(buildEachToEvent(key, value));
