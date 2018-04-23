@@ -7,8 +7,6 @@ import net.jodah.expiringmap.ExpiringMap;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.flume.Event;
-import org.apache.flume.event.EventBuilder;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -45,7 +43,7 @@ public class FlowCounter {
     private static final List<String> ATTR_LIST = Lists.newArrayList(COUNT_TOPIC,COUNT_TABLE,COUNT_FROM,
             COUNT_PERIOD, CURRENT_TIME,COUNT);
 
-    private static final Map<String, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
+    private static final Map<CounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
             .maxSize(10000)
             .expiration(2, TimeUnit.HOURS)
             .expirationPolicy(ExpirationPolicy.CREATED)
@@ -64,32 +62,30 @@ public class FlowCounter {
         return records;
     }
 
-    private static ProducerRecord buildEachToEvent(String key, AtomicLong value) {
-        String[] keyArray = key.split(";");
+    private static ProducerRecord buildEachToEvent(CounterKey key, AtomicLong value) {
 
         String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_FLOW_COUNTER_TOPIC);
         Schema schema = SchemaCache.getSchema(schemaString);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
-        avroRecord.put(COUNT_TOPIC, keyArray[0]);
-        avroRecord.put(COUNT_TABLE, keyArray[1]);
-        avroRecord.put(COUNT_FROM, keyArray[2]);
-        avroRecord.put(COUNT_PERIOD, keyArray[3]);
+        avroRecord.put(COUNT_TOPIC, key.topic);
+        avroRecord.put(COUNT_TABLE, key.table);
+        avroRecord.put(COUNT_FROM, key.fromDB);
+        avroRecord.put(COUNT_PERIOD, key.timePeriod);
         avroRecord.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         avroRecord.put(COUNT, value.toString());
 
         return new ProducerRecord<Object, Object>(AVRO_FLOW_COUNTER_TOPIC, avroRecord);
     }
 
-    private static ProducerRecord buildEachToJsonEvent(String key, AtomicLong value) {
-        String[] keyArray = key.split(";");
+    private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
         byte[] eventBody;
         Map<String, String> eventData = Maps.newHashMap();
 
-        eventData.put(COUNT_TOPIC, keyArray[0]);
-        eventData.put(COUNT_TABLE, keyArray[1]);
-        eventData.put(COUNT_FROM, keyArray[2]);
-        eventData.put(COUNT_PERIOD, keyArray[3]);
+        eventData.put(COUNT_TOPIC, key.topic);
+        eventData.put(COUNT_TABLE, key.table);
+        eventData.put(COUNT_FROM, key.fromDB);
+        eventData.put(COUNT_PERIOD, key.timePeriod);
         eventData.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         eventData.put(COUNT, value.toString());
 
@@ -100,14 +96,11 @@ public class FlowCounter {
 
     public static void increment(String topic, String table, String fromDB,
                                    String fieldValue) {
-        String timeKey = getTimePeriodKeyByValue(fieldValue);
-        String totalKey = null;
-
-        if (timeKey != null)
-            totalKey =  topic + ";" + table + ";" + fromDB + ";" + timeKey;
-
-        if (totalKey != null)
+        String timePeriod = getTimePeriodKeyByValue(fieldValue);
+        if (timePeriod != null) {
+            CounterKey totalKey  = new CounterKey(topic, table, fromDB, timePeriod);
             incrementByKey(totalKey);
+        }
     }
 
     private static String getTimePeriodKeyByValue(String fieldValue) {
@@ -143,11 +136,58 @@ public class FlowCounter {
         }
     }
 
-    private static long incrementByKey(String key) {
+    private static long incrementByKey(CounterKey key) {
         if (!CACHE_COUNTER.containsKey(key)) {
             CACHE_COUNTER.put(key, new AtomicLong(0));
         }
         return CACHE_COUNTER.get(key).incrementAndGet();
+    }
+
+    private static class CounterKey {
+        private final String topic;
+        private final String table;
+        private final String fromDB;
+        private final String timePeriod;
+
+        private CounterKey(String topic, String table, String fromDB, String timePeriod) {
+            this.topic = topic;
+            this.table = table;
+            this.fromDB = fromDB;
+            this.timePeriod = timePeriod;
+        }
+
+        @Override
+        public String toString() {
+            return "CounterKey{" +
+                    "topic='" + topic + '\'' +
+                    ", table='" + table + '\'' +
+                    ", fromDB='" + fromDB + '\'' +
+                    ", timePeriod='" + timePeriod + '\'' +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            CounterKey that = (CounterKey) o;
+
+            return topic.equals(that.topic)
+                    && table.equals(that.table)
+                    && fromDB.equals(that.fromDB)
+                    && timePeriod.equals(that.timePeriod);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = topic.hashCode();
+            result = 31 * result + table.hashCode();
+            result = 31 * result + fromDB.hashCode();
+            result = 31 * result + timePeriod.hashCode();
+            return result;
+        }
     }
 
 }
