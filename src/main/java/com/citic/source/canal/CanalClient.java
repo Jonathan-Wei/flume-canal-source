@@ -34,7 +34,7 @@ class CanalClient {
 
     private CanalConnector canalConnector;
 
-    CanalClient(CanalConf canalConf) throws ServerUrlsFormatException {
+    CanalClient(CanalConf canalConf) throws IllegalArgumentException {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
             this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),

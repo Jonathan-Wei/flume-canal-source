@@ -1,18 +1,12 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
-import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 
@@ -58,7 +52,7 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
         eventMap.put(META_FIELD_TS, String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
-        eventMap.put(META_FIELD_AGENT, canalConf.getIPAddress());
+        eventMap.put(META_FIELD_AGENT, canalConf.getAgentIPAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
         eventMap.put(META_FIELD_SQL, Strings.isNullOrEmpty(sql) ? "no sql" : sql );
         return eventMap;

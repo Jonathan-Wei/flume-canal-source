@@ -18,7 +18,6 @@ package com.citic.source.canal;
 
 import com.citic.helper.RegexHashMap;
 import com.citic.helper.Utility;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -33,7 +32,7 @@ import java.util.*;
 
 class CanalConf {
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
-    private String IPAddress;
+    private String agentIPAddress;
     private String zkServers;
     private String destination;
     private String username;
@@ -116,7 +115,7 @@ class CanalConf {
         this.destination = destination;
     }
 
-    String getIPAddress() { return IPAddress; };
+    String getAgentIPAddress() { return agentIPAddress; };
 
 
     String getZkServers() { return zkServers; }
@@ -141,7 +140,7 @@ class CanalConf {
 
     void setServerUrl(String serverUrl) { this.serverUrl = serverUrl; }
 
-    void setIpInterface(String ipInterface) { IPAddress = Utility.getLocalIP(ipInterface); }
+    void setIpInterface(String ipInterface) { agentIPAddress = Utility.getLocalIP(ipInterface); }
 
     void setServerUrls(String serverUrls) { this.serverUrls = serverUrls;}
 
@@ -159,7 +158,7 @@ class CanalConf {
     }
 
     static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws
-            ServerUrlsFormatException {
+            IllegalArgumentException {
         List<SocketAddress> addresses = new ArrayList<>();
         if (StringUtils.isNotEmpty(serverUrls)) {
             for (String serverUrl : serverUrls.split(",")) {
@@ -167,7 +166,7 @@ class CanalConf {
                     try {
                         addresses.add(convertUrlToSocketAddress(serverUrl));
                     } catch (Exception exception) {
-                        throw new ServerUrlsFormatException(String.format("The serverUrls are malformed. " +
+                        throw new IllegalArgumentException(String.format("The serverUrls are malformed. " +
                                 "The ServerUrls : \"%s\" .", serverUrls), exception);
                     }
                 }
@@ -178,14 +177,14 @@ class CanalConf {
         }
     }
 
-    static SocketAddress convertUrlToSocketAddress(String serverUrl) throws ServerUrlsFormatException,
+    static SocketAddress convertUrlToSocketAddress(String serverUrl) throws IllegalArgumentException,
             NumberFormatException {
         String[] hostAndPort = serverUrl.split(":");
         if (hostAndPort.length == 2 && StringUtils.isNotEmpty(hostAndPort[1])) {
             int port  = Integer.parseInt(hostAndPort[1]);
             return new InetSocketAddress(hostAndPort[0], port);
         } else {
-            throw new ServerUrlsFormatException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
+            throw new IllegalArgumentException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
                     serverUrl));
         }
     }

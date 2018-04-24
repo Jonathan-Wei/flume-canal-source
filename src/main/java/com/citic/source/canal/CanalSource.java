@@ -18,7 +18,6 @@ package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
-import com.citic.instrumentation.SourceCounter;
 import com.google.common.collect.Lists;
 import org.apache.flume.*;
 import org.apache.flume.conf.Configurable;
@@ -29,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.citic.source.canal.CanalSourceConstants.SOURCE_TABLES_COUNTER;
 import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
 
 public class CanalSource extends AbstractPollableSource
@@ -42,7 +40,6 @@ public class CanalSource extends AbstractPollableSource
     private final List<Event> eventsAll = Lists.newArrayList();
 
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
-    private SourceCounter tableCounter;
     private EntryConverter entryConverter;
 
     /*
@@ -88,12 +85,7 @@ public class CanalSource extends AbstractPollableSource
         if (sourceCounter == null)
             sourceCounter = new org.apache.flume.instrumentation.SourceCounter(getName());
 
-        if (tableCounter == null) {
-            tableCounter = new SourceCounter(getName() + "-" + SOURCE_TABLES_COUNTER,
-                    (String[]) canalConf.getFilterTableList().toArray());
-        }
-
-        entryConverter = new EntryConverter(useAvro, canalConf, tableCounter);
+        entryConverter = new EntryConverter(useAvro, canalConf);
     }
 
     @Override
@@ -102,14 +94,13 @@ public class CanalSource extends AbstractPollableSource
         try {
             this.canalClient = new CanalClient(canalConf);
             this.canalClient.start();
-        } catch (ServerUrlsFormatException exception) {
+        } catch (IllegalArgumentException exception) {
             LOGGER.error(exception.getMessage(), exception);
 
             throw new FlumeException(exception);
         }
 
         sourceCounter.start();
-        tableCounter.start();
     }
 
     @Override
@@ -128,7 +119,7 @@ public class CanalSource extends AbstractPollableSource
             return Status.BACKOFF;
 
         for (CanalEntry.Entry entry : message.getEntries()) {
-            List<Event> events = entryConverter.convert(entry, canalConf, tableCounter);
+            List<Event> events = entryConverter.convert(entry, canalConf);
             eventsAll.addAll(events);
         }
 
@@ -162,6 +153,5 @@ public class CanalSource extends AbstractPollableSource
         sourceCounter.stop();
 
         LOGGER.info("" + "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
-        tableCounter.stop();
     }
 }

@@ -22,6 +22,8 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.Map;
 public class Utility {
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
     private static final String DEFAULT_IP = "127.0.0.1";
+    private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
 
     public static String getLocalIP(String interfaceName) {
         String ip = DEFAULT_IP;
@@ -111,5 +114,15 @@ public class Utility {
 
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
         return recordInjection.apply(avroRecord);
+    }
+
+    public static String getCurrentRounded5Minutes() {
+        Calendar calendar = Calendar.getInstance();
+        int unroundedMinutes = calendar.get(Calendar.MINUTE);
+        calendar.add(Calendar.MINUTE, - (unroundedMinutes % 5));
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
+        dateFormat.setTimeZone(calendar.getTimeZone());
+        return dateFormat.format(calendar.getTime());
     }
 }

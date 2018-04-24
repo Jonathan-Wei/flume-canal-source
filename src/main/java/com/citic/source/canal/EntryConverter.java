@@ -17,7 +17,6 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
-import com.citic.instrumentation.SourceCounter;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.flume.Event;
 import org.slf4j.Logger;
@@ -33,18 +32,18 @@ class EntryConverter {
     private final EntrySQLHandlerInterface sqlHandler;
     private final DataHandlerInterface dataHandler;
 
-    EntryConverter(boolean useAvro, CanalConf canalConf, SourceCounter tableCounter) {
+    EntryConverter(boolean useAvro, CanalConf canalConf) {
         if (useAvro) {
             this.sqlHandler = new AbstractEntrySQLHandler.Avro();
-            this.dataHandler = new AbstractDataHandler.Avro(canalConf, tableCounter);
+            this.dataHandler = new AbstractDataHandler.Avro(canalConf);
         } else {
             this.sqlHandler = new AbstractEntrySQLHandler.Json();
-            this.dataHandler = new AbstractDataHandler.Json(canalConf, tableCounter);
+            this.dataHandler = new AbstractDataHandler.Json(canalConf);
         }
 
     }
 
-    List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf, SourceCounter tableCounter) {
+    List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
         List<Event> events = new ArrayList<>();
         /*
         * TODO: 事务相关,暂不做处理

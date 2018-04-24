@@ -1,10 +1,10 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.AgentCounter;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
-import com.citic.instrumentation.SourceCounter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -12,8 +12,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
@@ -25,7 +23,6 @@ import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.sql.Types;
 import java.util.List;
@@ -46,11 +43,9 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                                     META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
 
     private final CanalConf canalConf;
-    private final SourceCounter tableCounter;
 
-    private AbstractDataHandler(CanalConf canalConf, SourceCounter tableCounter) {
+    private AbstractDataHandler(CanalConf canalConf) {
         this.canalConf = canalConf;
-        this.tableCounter = tableCounter;
     }
 
     /*
@@ -91,19 +86,14 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         // 处理行数据
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
-        try {
-            // 监控表数据
-             tableCounter.incrementTableReceivedCount(keyName);
-        } catch (Exception e) {
-            LOGGER.error("table name:{}, attributes:{}", keyName, tableCounter.getAttributes());
-            LOGGER.error(e.getMessage());
-        }
 
         String timeFieldName = this.getTimeFieldName(topic);
         if (timeFieldName != null) {
             String timeFieldValue = eventData.get(timeFieldName);
             FlowCounter.increment(topic, keyName, canalConf.getFromDBIP(), timeFieldValue);
         }
+
+        AgentCounter.increment(canalConf.getAgentIPAddress());
 
         String pk = getPK(rowData);
         // 处理 event Header
@@ -157,7 +147,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         eventMap.put(META_FIELD_TS, String.valueOf(Math.round(entryHeader.getExecuteTime() / 1000)));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
         eventMap.put(META_FIELD_TYPE, eventType.toString());
-        eventMap.put(META_FIELD_AGENT, canalConf.getIPAddress());
+        eventMap.put(META_FIELD_AGENT, canalConf.getAgentIPAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
 
         eventMap.putAll(rowDataMap);
@@ -220,8 +210,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         private final Table<String, String, String> topicSchemaFieldToTableField = HashBasedTable.create();
 
 
-        Avro(CanalConf canalConf, SourceCounter tableCounter) {
-            super(canalConf, tableCounter);
+        Avro(CanalConf canalConf) {
+            super(canalConf);
 
             splitTableToTopicMap(canalConf.getTableToTopicMap());
             splitTableFieldsFilter(canalConf.getTableFieldsFilter());
@@ -349,8 +339,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         // topic -> table fields list
         private final Map<String, List<String>> topicToTableFields = Maps.newHashMap();
 
-        Json(CanalConf canalConf, SourceCounter tableCounter) {
-            super(canalConf, tableCounter);
+        Json(CanalConf canalConf) {
+            super(canalConf);
             splitTableToTopicMap(canalConf.getTableToTopicMap());
             splitTableFieldsFilter(canalConf.getTableFieldsFilter());
         }

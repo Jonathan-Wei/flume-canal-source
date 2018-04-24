@@ -7,6 +7,9 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -17,63 +20,18 @@ import java.util.concurrent.TimeUnit;
 public class Test {
 
     public static void main(String[] args) throws InterruptedException {
-//        MetricRegistry metricRegistry = new MetricRegistry();
-//
-//        Meter meter2 = metricRegistry.meter("meter2");
-//
-//        Gauge<Long> activeUsersGauge = new ActiveUsersGauge(5, TimeUnit.SECONDS);
+        while (true) {
+            TimeUnit.SECONDS.sleep(10);
 
-//        for (int i = 0; i < 100; i++) {
-//            TimeUnit.SECONDS.sleep(1);
-//            Long value =  activeUsersGauge.getValue();
-//            System.out.printf(String.valueOf(value) );
-//
-//        }
+            Calendar calendar = Calendar.getInstance();
+            int unroundedMinutes = calendar.get(Calendar.MINUTE);
+            calendar.add(Calendar.MINUTE, - (unroundedMinutes % 5));
 
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+//            dateFormat.setTimeZone(calendar.getTimeZone());
+            System.out.println(dateFormat.format(calendar.getTime()));
 
-//        String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss")
-////                .format(new Date(Long.parseLong("1524136724014")));
-//                .format(new Date("2018-09-01 12:13"));
-//        System.out.println(timeStamp);
-
-        Long.parseLong("erer");
-
-        DateTimeFormatter f = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-        DateTime dateTime = f.parseDateTime("2012-01-10 23:13:23");
-
-        String timeKey = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-                .format(dateTime.toDate());
-        System.out.println(timeKey);
-
-
-//        LoadingCache<String, Counter> graphs = CacheBuilder.newBuilder()
-//                .concurrencyLevel(4)
-//                .weakKeys()
-//                .maximumSize(10000)
-//                .expireAfterWrite(10, TimeUnit.MINUTES)
-//                .build(
-//                        new CacheLoader<String, Counter>() {
-//                            public Counter load(String key) {
-//                                return new Counter();
-//                            }
-//                        });
-
-
-//        Map<String, String> map = ExpiringMap.builder()
-//                .maxSize(123)
-//                .expiration(3, TimeUnit.SECONDS)
-//                .expirationPolicy(ExpirationPolicy.ACCESSED)
-//                .build();
-//
-//        map.put("hello", "HELLO");
-//        map.put("wew", "HELLO");
-//        map.put("qwqw", "HELLO");
-//
-//                for (int i = 0; i < 100; i++) {
-//            TimeUnit.SECONDS.sleep(1);
-//                    System.out.println(map.keySet().toString());
-//                    System.out.println(map.get("hello"));
-//        }
+        }
 
 
     }
