@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
+import static com.citic.source.canal.CanalSourceConstants.*;
 
 public class CanalSource extends AbstractPollableSource
         implements Configurable {
@@ -46,19 +46,18 @@ public class CanalSource extends AbstractPollableSource
     * 获取配置
     * */
     private void setCanalConf(Context context) {
-        canalConf.setIpInterface(context.getString(CanalSourceConstants.IP_INTERFACE));
-        canalConf.setServerUrl(context.getString(CanalSourceConstants.SERVER_URL));
-        canalConf.setServerUrls(context.getString(CanalSourceConstants.SERVER_URLS));
-        canalConf.setZkServers(context.getString(CanalSourceConstants.ZOOKEEPER_SERVERS));
-        canalConf.setDestination(context.getString(CanalSourceConstants.DESTINATION));
-        canalConf.setUsername(context.getString(CanalSourceConstants.USERNAME,
-                CanalSourceConstants.DEFAULT_USERNAME));
-        canalConf.setPassword(context.getString(CanalSourceConstants.PASSWORD,
-                CanalSourceConstants.DEFAULT_PASSWORD));
-        canalConf.setBatchSize(context.getInteger(CanalSourceConstants.BATCH_SIZE,
-                CanalSourceConstants.DEFAULT_BATCH_SIZE));
-        canalConf.setTableToTopicMap(context.getString(CanalSourceConstants.TABLE_TO_TOPIC_MAP));
-        canalConf.setTableFieldsFilter(context.getString(CanalSourceConstants.TABLE_FIELDS_FILTER));
+        canalConf.setIpInterface(context.getString(IP_INTERFACE));
+        canalConf.setServerUrl(context.getString(SERVER_URL));
+        canalConf.setServerUrls(context.getString(SERVER_URLS));
+        canalConf.setZkServers(context.getString(ZOOKEEPER_SERVERS));
+        canalConf.setDestination(context.getString(DESTINATION));
+        canalConf.setUsername(context.getString(USERNAME, DEFAULT_USERNAME));
+        canalConf.setPassword(context.getString(PASSWORD, DEFAULT_PASSWORD));
+        canalConf.setBatchSize(context.getInteger(BATCH_SIZE, DEFAULT_BATCH_SIZE));
+        canalConf.setTableToTopicMap(context.getString(TABLE_TO_TOPIC_MAP));
+        canalConf.setTableFieldsFilter(context.getString(TABLE_FIELDS_FILTER));
+        
+        canalConf.setShutdownFlowCounter(context.getBoolean(SHUTDOWN_FLOW_COUNTER, DEFAULT_SHUTDOWN_FLOW_COUNTER));
     }
 
     @Override
@@ -69,17 +68,17 @@ public class CanalSource extends AbstractPollableSource
         canalConf = new CanalConf();
 
         setCanalConf(context);
-        // CanalSourceConstants.TABLE_TO_TOPIC_MAP 配置不能为空
+        // TABLE_TO_TOPIC_MAP 配置不能为空
         if (canalConf.getTableToTopicMap() == null || canalConf.getTableToTopicMap().isEmpty()){
             throw new ConfigurationException(String.format("%s cannot be empty or null",
-                    CanalSourceConstants.TABLE_TO_TOPIC_MAP));
+                    TABLE_TO_TOPIC_MAP));
         }
 
         if (!canalConf.isConnectionUrlValid()) {
             throw new ConfigurationException(String.format("\"%s\",\"%s\" AND \"%s\" at least one must be specified!",
-                    CanalSourceConstants.ZOOKEEPER_SERVERS,
-                    CanalSourceConstants.SERVER_URL,
-                    CanalSourceConstants.SERVER_URLS));
+                    ZOOKEEPER_SERVERS,
+                    SERVER_URL,
+                    SERVER_URLS));
         }
 
         if (sourceCounter == null)

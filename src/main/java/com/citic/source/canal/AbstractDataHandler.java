@@ -87,13 +87,16 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
-        String timeFieldName = this.getTimeFieldName(topic);
-        if (timeFieldName != null) {
-            String timeFieldValue = eventData.get(timeFieldName);
-            FlowCounter.increment(topic, keyName, canalConf.getFromDBIP(), timeFieldValue);
+        if (!canalConf.isShutdownFlowCounter()) {
+            // topic 数据量统计
+            String timeFieldName = this.getTimeFieldName(topic);
+            if (timeFieldName != null) {
+                String timeFieldValue = eventData.get(timeFieldName);
+                FlowCounter.increment(topic, keyName, canalConf.getFromDBIP(), timeFieldValue);
+            }
+            // agent 数据量统计
+            AgentCounter.increment(canalConf.getAgentIPAddress());
         }
-
-        AgentCounter.increment(canalConf.getAgentIPAddress());
 
         String pk = getPK(rowData);
         // 处理 event Header

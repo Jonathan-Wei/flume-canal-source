@@ -38,12 +38,14 @@ public class CanalSourceConstants {
 
     static final String USE_AVRO = "useAvro";
 
+    static final String SHUTDOWN_FLOW_COUNTER = "shutdownFlowCounter";
+    static final boolean DEFAULT_SHUTDOWN_FLOW_COUNTER = false;
+
     static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
     static final int DEFAULT_BATCH_SIZE = 1024;
     static final String DEFAULT_USERNAME = "";
     static final String DEFAULT_PASSWORD = "";
 
-    static final String SOURCE_TABLES_COUNTER = "SourceTables";
 
     static final String META_FIELD_TABLE = "__table";
     static final String META_FIELD_TS = "__ts";

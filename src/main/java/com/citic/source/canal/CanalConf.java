@@ -41,6 +41,9 @@ class CanalConf {
     private String serverUrl;
     private String serverUrls;
 
+    private boolean shutdownFlowCounter;
+
+
     private String tableToTopicMap;
     private String tableFieldsFilter;
 
@@ -115,8 +118,11 @@ class CanalConf {
         this.destination = destination;
     }
 
-    String getAgentIPAddress() { return agentIPAddress; };
+    public boolean isShutdownFlowCounter() { return shutdownFlowCounter; }
 
+    public void setShutdownFlowCounter(boolean shutdownFlowCounter) { this.shutdownFlowCounter = shutdownFlowCounter; }
+
+    String getAgentIPAddress() { return agentIPAddress; };
 
     String getZkServers() { return zkServers; }
 
