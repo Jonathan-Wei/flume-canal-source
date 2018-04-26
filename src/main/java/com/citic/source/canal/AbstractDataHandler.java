@@ -177,6 +177,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                     * datetime 2018-04-02 11:43:16
                     * timestamp 2018-04-02 11:45:02
                     * mysql 默认格式如上，现在不做处理后续根据需要再更改
+                    * mysql datetime maps to a java.sql.Timestamp
                     * */
                     case Types.DATE:
                     case Types.TIME:

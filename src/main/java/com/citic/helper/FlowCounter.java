@@ -96,44 +96,20 @@ public class FlowCounter {
 
     public static void increment(String topic, String table, String fromDB,
                                    String fieldValue) {
-        String timePeriod = getTimePeriodKeyByValue(fieldValue);
+        String timePeriod = getTimePeriodKey(fieldValue);
         if (timePeriod != null) {
             CounterKey totalKey  = new CounterKey(topic, table, fromDB, timePeriod);
             incrementByKey(totalKey);
         }
     }
 
-    private static String getTimePeriodKeyByValue(String fieldValue) {
-        if (fieldValue == null)
-            return null;
-
-        try {
-            long timeStamp = Long.parseLong(fieldValue);
-            return getTimePeriodKey(timeStamp);
-        } catch (NumberFormatException ex) {
-            // 使用字符模式解析 时间戳
-            return getTimePeriodKey(fieldValue);
-        }
-    }
-
-    private static String getTimePeriodKey(long timeStamp) {
-        return new SimpleDateFormat(TIME_KEY_FORMAT).format(new Date(timeStamp));
-    }
-
-
     private static String getTimePeriodKey(String timeStamp) {
         if (timeStamp == null)
             return null;
-        DateTimeFormatter f = DateTimeFormat.forPattern(SUPPORT_TIME_FORMAT);
-
-        try {
-            DateTime dateTime = f.parseDateTime(timeStamp);
-
-            return new SimpleDateFormat(TIME_KEY_FORMAT).format(dateTime.toDate());
-        } catch (IllegalArgumentException ex) {
-            LOGGER.error(ex.getMessage(), ex);
+        // 只支持 数据库中的 datetime和 timestamp 格式
+        if (timeStamp.length() != SUPPORT_TIME_FORMAT.length())
             return null;
-        }
+        return timeStamp.substring(0, TIME_KEY_FORMAT.length());
     }
 
     private static long incrementByKey(CounterKey key) {
