@@ -83,7 +83,7 @@ public class AgentCounter {
     }
 
     public static void increment(String agentIp) {
-        String minuteKey = Utility.getCurrentRounded5Minutes();
+        String minuteKey = Utility.Minutes5.getCurrentRounded5Minutes();
         CounterKey counterKey = new CounterKey(agentIp, minuteKey);
         incrementByKey(counterKey);
     }

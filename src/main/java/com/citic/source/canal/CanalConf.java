@@ -40,6 +40,7 @@ class CanalConf {
     private int batchSize;
     private String serverUrl;
     private String serverUrls;
+    private String fromDBIP;
 
     private boolean shutdownFlowCounter;
 
@@ -70,8 +71,7 @@ class CanalConf {
     }
 
     String getFromDBIP() {
-        // destination example: 192_168_2_24-3306
-        return this.destination.replace("-", ":").replace("_", ".");
+        return this.fromDBIP;
     }
 
     private void splitTableToTopicMap(String tableToTopicMap) {
@@ -116,6 +116,8 @@ class CanalConf {
     void setDestination(String destination) {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(destination), "destination cannot empty");
         this.destination = destination;
+        // destination example: 192_168_2_24-3306
+        this.fromDBIP = this.destination.replace("-", ":").replace("_", ".");
     }
 
     public boolean isShutdownFlowCounter() { return shutdownFlowCounter; }

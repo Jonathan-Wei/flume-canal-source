@@ -1,6 +1,9 @@
 package com.citic.helper;
 
 import com.google.common.base.Joiner;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
@@ -14,24 +17,19 @@ import org.apache.avro.io.JsonEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class Utility {
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
     private static final String DEFAULT_IP = "127.0.0.1";
-    private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
 
     public static String getLocalIP(String interfaceName) {
         String ip = DEFAULT_IP;
@@ -116,13 +114,31 @@ public class Utility {
         return recordInjection.apply(avroRecord);
     }
 
-    public static String getCurrentRounded5Minutes() {
-        Calendar calendar = Calendar.getInstance();
-        int unroundedMinutes = calendar.get(Calendar.MINUTE);
-        calendar.add(Calendar.MINUTE, - (unroundedMinutes % 5));
+    public static class Minutes5 {
+        private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
+        private static final Calendar calendar = GregorianCalendar.getInstance();
+        private static final SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
-        dateFormat.setTimeZone(calendar.getTimeZone());
-        return dateFormat.format(calendar.getTime());
+        private static final LoadingCache<Date, String> formatCache = CacheBuilder
+                .newBuilder()
+                .maximumSize(1000)
+                .expireAfterWrite(6, TimeUnit.MINUTES)
+                .build(
+                        new CacheLoader<Date, String>() {
+                            @Override
+                            public String load(Date date) {
+                                return dateFormat.format(date);
+                            }
+                        });
+
+        public static String getCurrentRounded5Minutes() {
+            calendar.setTime(new Date());
+            int unroundedMinutes = calendar.get(Calendar.MINUTE);
+            calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0);
+
+            return formatCache.getUnchecked(calendar.getTime());
+        }
     }
 }
