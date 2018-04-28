@@ -41,6 +41,9 @@ public class CanalSourceConstants {
     static final String SHUTDOWN_FLOW_COUNTER = "shutdownFlowCounter";
     static final boolean DEFAULT_SHUTDOWN_FLOW_COUNTER = false;
 
+    static final String WRITE_SQL_TO_DATA = "writeSQLToData";
+    static final boolean DEFAULT_WRITE_SQL_TO_DATA = false;
+
     static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
     static final int DEFAULT_BATCH_SIZE = 1024;
     static final String DEFAULT_USERNAME = "";

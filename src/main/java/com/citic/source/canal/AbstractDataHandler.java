@@ -34,18 +34,25 @@ import static com.citic.source.canal.CanalSourceConstants.*;
 interface DataHandlerInterface {
     Event getDataEvent(CanalEntry.RowData rowData,
                        CanalEntry.Header entryHeader,
-                       CanalEntry.EventType eventType);
+                       CanalEntry.EventType eventType,
+                       String sql);
 }
 
 abstract class AbstractDataHandler implements DataHandlerInterface {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
-    private static final List<String> ATTR_LIST = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
-                                    META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
 
     private final CanalConf canalConf;
+    private final List<String> attr_list;
 
     private AbstractDataHandler(CanalConf canalConf) {
         this.canalConf = canalConf;
+
+        attr_list = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
+                META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
+
+        if (canalConf.isWriteSQLToData()) {
+            attr_list.add(META_FIELD_SQL);
+        }
     }
 
     /*
@@ -80,11 +87,12 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     * */
     public Event getDataEvent(CanalEntry.RowData rowData,
                               CanalEntry.Header entryHeader,
-                              CanalEntry.EventType eventType) {
+                              CanalEntry.EventType eventType,
+                              String sql) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
         // 处理行数据
-        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
+        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, sql);
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
         if (!canalConf.isShutdownFlowCounter()) {
@@ -134,8 +142,9 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     * 处理行数据，并添加其他字段信息
     * */
     private Map<String, String> handleRowData(CanalEntry.RowData rowData,
-                                                     CanalEntry.Header entryHeader,
-                                                     CanalEntry.EventType eventType) {
+                                              CanalEntry.Header entryHeader,
+                                              CanalEntry.EventType eventType,
+                                              String sql) {
         Map<String, String> eventMap = Maps.newHashMap();
         Map<String, String> rowDataMap;
 
@@ -146,6 +155,9 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
         }
 
+        if (canalConf.isWriteSQLToData()) {
+            eventMap.put(META_FIELD_SQL, sql);
+        }
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
         eventMap.put(META_FIELD_TS, String.valueOf(Math.round(System.currentTimeMillis() / 1000)));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
@@ -310,7 +322,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
             // schemaFieldList and ATTR_LIST are same List<String> type
             @SuppressWarnings("unchecked")
-            String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, ATTR_LIST), schemaName);
+            String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, super.attr_list), schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
 
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
@@ -321,7 +333,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                 avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
             }
 
-            for (String fieldStr: ATTR_LIST) {
+            for (String fieldStr: super.attr_list) {
                 avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
             }
 
@@ -361,7 +373,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
                 // schemaFieldList and ATTR_LIST are same List<String> type
                 @SuppressWarnings("unchecked")
-                List<String> unionList = ListUtils.union(tableFields, ATTR_LIST);
+                List<String> unionList = ListUtils.union(tableFields, super.attr_list);
                 unionList.forEach(fieldName -> {
                     filterTableData.put((String) fieldName, eventData.getOrDefault(fieldName,""));
                 });

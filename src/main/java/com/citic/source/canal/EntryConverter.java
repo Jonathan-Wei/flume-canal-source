@@ -32,6 +32,8 @@ class EntryConverter {
     private final EntrySQLHandlerInterface sqlHandler;
     private final DataHandlerInterface dataHandler;
 
+    private String normalSQL;
+
     EntryConverter(boolean useAvro, CanalConf canalConf) {
         if (useAvro) {
             this.sqlHandler = new AbstractEntrySQLHandler.Avro();
@@ -75,13 +77,13 @@ class EntryConverter {
 
             // canal 在 QUERY 事件没有做表过滤
             if (eventType == CanalEntry.EventType.QUERY) {
-                // do nothing
+                normalSQL = rowChange.getSql();
             } else if (rowChange.getIsDdl()) {
                 // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
                 events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
             } else {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
-                    Event dataEvent = this.dataHandler.getDataEvent(rowData, eventHeader, eventType);
+                    Event dataEvent = this.dataHandler.getDataEvent(rowData, eventHeader, eventType, normalSQL);
                     events.add(dataEvent);
                 }
             }

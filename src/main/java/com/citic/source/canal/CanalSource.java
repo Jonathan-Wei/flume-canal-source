@@ -58,6 +58,7 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setTableFieldsFilter(context.getString(TABLE_FIELDS_FILTER));
         
         canalConf.setShutdownFlowCounter(context.getBoolean(SHUTDOWN_FLOW_COUNTER, DEFAULT_SHUTDOWN_FLOW_COUNTER));
+        canalConf.setWriteSQLToData(context.getBoolean(WRITE_SQL_TO_DATA, DEFAULT_WRITE_SQL_TO_DATA));
     }
 
     @Override

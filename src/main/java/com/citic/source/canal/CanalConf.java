@@ -43,7 +43,7 @@ class CanalConf {
     private String fromDBIP;
 
     private boolean shutdownFlowCounter;
-
+    private boolean writeSQLToData;
 
     private String tableToTopicMap;
     private String tableFieldsFilter;
@@ -120,9 +120,13 @@ class CanalConf {
         this.fromDBIP = this.destination.replace("-", ":").replace("_", ".");
     }
 
-    public boolean isShutdownFlowCounter() { return shutdownFlowCounter; }
+    boolean isWriteSQLToData() { return writeSQLToData; }
 
-    public void setShutdownFlowCounter(boolean shutdownFlowCounter) { this.shutdownFlowCounter = shutdownFlowCounter; }
+    void setWriteSQLToData(boolean writeSQLToData) { this.writeSQLToData = writeSQLToData; }
+
+    boolean isShutdownFlowCounter() { return shutdownFlowCounter; }
+
+    void setShutdownFlowCounter(boolean shutdownFlowCounter) { this.shutdownFlowCounter = shutdownFlowCounter; }
 
     String getAgentIPAddress() { return agentIPAddress; };
 
