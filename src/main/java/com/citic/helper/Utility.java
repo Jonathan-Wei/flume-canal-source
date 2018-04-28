@@ -114,7 +114,7 @@ public class Utility {
         return recordInjection.apply(avroRecord);
     }
 
-    public static class Minutes5 {
+    static class Minutes5 {
         private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
         private static final Calendar calendar = GregorianCalendar.getInstance();
         private static final SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
@@ -123,15 +123,14 @@ public class Utility {
                 .newBuilder()
                 .maximumSize(1000)
                 .expireAfterWrite(6, TimeUnit.MINUTES)
-                .build(
-                        new CacheLoader<Date, String>() {
+                .build(new CacheLoader<Date, String>() {
                             @Override
                             public String load(Date date) {
                                 return dateFormat.format(date);
                             }
                         });
 
-        public static String getCurrentRounded5Minutes() {
+        static String getCurrentRounded5Minutes() {
             calendar.setTime(new Date());
             int unroundedMinutes = calendar.get(Calendar.MINUTE);
             calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));
