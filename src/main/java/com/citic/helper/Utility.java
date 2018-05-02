@@ -4,9 +4,6 @@ import com.google.common.base.Joiner;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -62,19 +59,22 @@ public class Utility {
     * get schema String
     * */
     public static String getTableFieldSchema(List<String> schemaFieldList, String schemaName) {
-        List<String> resultList = Lists.newArrayList();
+        StringBuilder builder = new StringBuilder();
         String schema = "{"
                 + "\"type\":\"record\","
                 + "\"name\":\""+ schemaName +"\","
                 + "\"fields\":[";
 
+        builder.append(schema);
+        String prefix = "";
         for (String fieldStr: schemaFieldList) {
             String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
-            resultList.add(field);
+            builder.append(prefix);
+            prefix = ",";
+            builder.append(field);
         }
-        schema += Joiner.on(",").join(resultList);
-        schema += "]}";
-        return schema;
+        builder.append("]}");
+        return builder.toString();
     }
 
     /*
@@ -110,8 +110,7 @@ public class Utility {
             avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
         }
 
-        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-        return recordInjection.apply(avroRecord);
+        return AvroRecordSerDe.serialize(avroRecord, schema);
     }
 
     static class Minutes5 {

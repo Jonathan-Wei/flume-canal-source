@@ -1,10 +1,7 @@
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
-import com.citic.helper.AgentCounter;
-import com.citic.helper.FlowCounter;
-import com.citic.helper.SchemaCache;
-import com.citic.helper.Utility;
+import com.citic.helper.*;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -12,8 +9,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -159,7 +154,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             eventMap.put(META_FIELD_SQL, sql == null ? "cannot get sql" : sql);
         }
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
-        eventMap.put(META_FIELD_TS, String.valueOf(System.currentTimeMillis()));
+        eventMap.put(META_FIELD_TS, String.valueOf(System.currentTimeMillis() / 1000.0));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
         eventMap.put(META_FIELD_TYPE, eventType.toString());
         eventMap.put(META_FIELD_AGENT, canalConf.getAgentIPAddress());
@@ -325,7 +320,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             String schemaString = Utility.getTableFieldSchema(ListUtils.union(schemaFieldList, super.attr_list), schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
 
-            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
             GenericRecord avroRecord = new GenericData.Record(schema);
 
             for (String fieldStr: schemaFieldList) {
@@ -337,7 +331,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                 avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
             }
 
-            byte[] eventBody = recordInjection.apply(avroRecord);
+            byte[] eventBody = AvroRecordSerDe.serialize(avroRecord, schema);
 
             // 用于sink解析
             eventHeader.put(SCHEMA_HEADER, schemaString);

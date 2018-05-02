@@ -1,13 +1,12 @@
 package com.citic.sink.canal;
 
 
+import com.citic.helper.AvroRecordSerDe;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.*;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -433,12 +432,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
     }
 
     private GenericRecord serializeAvroEvent(Event event, String schemaString) throws IOException {
-        byte[] bytes;
-        bytes = event.getBody();
-
+        byte[] bytes = event.getBody();
         Schema schema = SchemaCache.getSchema(schemaString);
-        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-        return recordInjection.invert(bytes).get();
+
+        return AvroRecordSerDe.deserialize(bytes, schema);
     }
 
 
