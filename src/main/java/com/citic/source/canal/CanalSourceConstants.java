@@ -60,7 +60,7 @@ public class CanalSourceConstants {
     static final String META_FIELD_SQL = "__sql";
 
 
-    public static final Gson GSON = new Gson();
-    public static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
-    public static DecimalFormat DECIMAL_FORMAT_3 = new DecimalFormat(".###");
+    public final static Gson GSON = new Gson();
+    public final static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
+    public final static DecimalFormat DECIMAL_FORMAT_3 = new DecimalFormat(".###");
 }
