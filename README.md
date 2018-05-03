@@ -37,6 +37,14 @@ flume-canal-source 是对 flume 的 source 扩展。从 canal 获取数据到 fl
 ## 如何使用
 部署 canal、flume 这里忽略。
 
+### Canal 注意事项
+
+- 授权 canal 具有从数据库同步binlog的权限
+```mysql
+CREATE USER 'repl'@'%.example.com' IDENTIFIED BY 'password';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%.example.com';
+```
+
 ### 配置 flume
 
 - 配置 source 类型*

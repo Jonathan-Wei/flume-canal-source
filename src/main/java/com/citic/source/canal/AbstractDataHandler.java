@@ -154,7 +154,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             eventMap.put(META_FIELD_SQL, sql == null ? "cannot get sql" : sql);
         }
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
-        eventMap.put(META_FIELD_TS, String.valueOf(System.currentTimeMillis() / 1000.0));
+        eventMap.put(META_FIELD_TS, DECIMAL_FORMAT_3.format(System.currentTimeMillis() / 1000.0));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
         eventMap.put(META_FIELD_TYPE, eventType.toString());
         eventMap.put(META_FIELD_AGENT, canalConf.getAgentIPAddress());

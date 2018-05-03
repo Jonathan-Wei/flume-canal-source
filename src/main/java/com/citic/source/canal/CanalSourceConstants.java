@@ -20,6 +20,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
+import java.text.DecimalFormat;
 import java.util.Map;
 
 public class CanalSourceConstants {
@@ -61,4 +62,5 @@ public class CanalSourceConstants {
 
     public static final Gson GSON = new Gson();
     public static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>(){}.getType();
+    public static DecimalFormat DECIMAL_FORMAT_3 = new DecimalFormat(".###");
 }
