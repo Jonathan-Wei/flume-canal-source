@@ -44,10 +44,10 @@ class SendCountMonitor {
                 new ThreadFactoryBuilder().setNameFormat("send-count-%d")
                         .build());
         // 分两个线程单独监控
-        executorService.scheduleWithFixedDelay(new SendFlowCounterRunnable(), 0,
+        executorService.scheduleAtFixedRate(new SendFlowCounterRunnable(), 0,
                 flowCounterInterval, TimeUnit.MINUTES);
 
-        executorService.scheduleWithFixedDelay(new SendAgentCounterRunnable(), 0,
+        executorService.scheduleAtFixedRate(new SendAgentCounterRunnable(), 0,
                 AGENT_COUNTER_REPORT_INTERVAL, TimeUnit.MINUTES);
     }
 
