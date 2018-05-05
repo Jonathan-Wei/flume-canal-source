@@ -45,7 +45,6 @@ public class Test {
         List<String> test = Lists.newArrayList("id", "name", "age");
         String testSchema = "test";
 
-
         DecimalFormat df2 = new DecimalFormat(".###");
 
         long startTime = System.currentTimeMillis();
@@ -55,7 +54,6 @@ public class Test {
         long stopTime = System.currentTimeMillis();
         long elapsedTime = stopTime - startTime;
         System.out.println(elapsedTime);
-
 
         startTime = System.currentTimeMillis();
         for (int i = 0; i < 1000000; i++) {

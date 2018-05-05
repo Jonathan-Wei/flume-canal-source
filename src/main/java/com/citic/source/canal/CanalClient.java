@@ -21,14 +21,14 @@ import com.alibaba.otter.canal.client.CanalConnector;
 import com.alibaba.otter.canal.client.CanalConnectors;
 import com.alibaba.otter.canal.protocol.Message;
 import com.google.common.base.Joiner;
+import java.net.SocketAddress;
+import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.SocketAddress;
-import java.util.List;
-
 class CanalClient {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalClient.class);
     private final CanalConf canalConf;
 
@@ -38,17 +38,21 @@ class CanalClient {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
             this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),
-                    canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace(String.format("Cluster connector has been created. Zookeeper servers are %s, destination is %s",
-                    canalConf.getZkServers(), canalConf.getDestination()));
+                canalConf.getUsername(), canalConf.getPassword());
+            LOGGER.trace(String.format(
+                "Cluster connector has been created. Zookeeper servers are %s, destination is %s",
+                canalConf.getZkServers(), canalConf.getDestination()));
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrls())) {
-            this.canalConnector = getConnector(CanalConf.convertUrlsToSocketAddressList(canalConf.getServerUrls()),
-                    canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace(String.format("Cluster connector has been created. Server urls are %s, destination is %s",
+            this.canalConnector = getConnector(
+                CanalConf.convertUrlsToSocketAddressList(canalConf.getServerUrls()),
+                canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
+            LOGGER.trace(String
+                .format("Cluster connector has been created. Server urls are %s, destination is %s",
                     canalConf.getServerUrls(), canalConf.getDestination()));
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrl())) {
-            this.canalConnector = getConnector(CanalConf.convertUrlToSocketAddress(canalConf.getServerUrl()),
-                    canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
+            this.canalConnector = getConnector(
+                CanalConf.convertUrlToSocketAddress(canalConf.getServerUrl()),
+                canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
         }
     }
 
@@ -83,17 +87,18 @@ class CanalClient {
         this.canalConnector.disconnect();
     }
 
-    private CanalConnector getConnector(String zkServers, String destination, String username, String password) {
+    private CanalConnector getConnector(String zkServers, String destination, String username,
+        String password) {
         return CanalConnectors.newClusterConnector(zkServers, destination, username, password);
     }
 
     private CanalConnector getConnector(List<? extends SocketAddress> addresses, String destination,
-                                        String username, String password) {
+        String username, String password) {
         return CanalConnectors.newClusterConnector(addresses, destination, username, password);
     }
 
     private CanalConnector getConnector(SocketAddress address, String destination, String username,
-                                        String password) {
+        String password) {
         return CanalConnectors.newSingleConnector(address, destination, username, password);
     }
 }

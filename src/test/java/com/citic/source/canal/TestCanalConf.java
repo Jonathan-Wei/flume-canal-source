@@ -16,7 +16,8 @@ public class TestCanalConf {
 
     @Test
     public void testConvertUrlsToSocketAddressList() throws IllegalArgumentException {
-        List<SocketAddress> list = CanalConf.convertUrlsToSocketAddressList("192.168.100.101:11111,192.168.100.102:10000,192.168.100.103:11111");
+        List<SocketAddress> list = CanalConf.convertUrlsToSocketAddressList(
+            "192.168.100.101:11111,192.168.100.102:10000,192.168.100.103:11111");
 
         Assert.assertEquals(list.size(), 3);
     }

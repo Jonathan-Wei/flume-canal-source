@@ -1,19 +1,10 @@
 package com.citic.helper;
 
+import static com.citic.source.canal.CanalSourceConstants.GSON;
+import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import net.jodah.expiringmap.ExpirationPolicy;
-import net.jodah.expiringmap.ExpiringMap;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -21,12 +12,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static com.citic.source.canal.CanalSourceConstants.GSON;
-import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
+import net.jodah.expiringmap.ExpirationPolicy;
+import net.jodah.expiringmap.ExpiringMap;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class FlowCounter {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(FlowCounter.class);
     private static final String TIME_KEY_FORMAT = "yyyy-MM-dd HH";
     private static final String SUPPORT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
@@ -40,24 +37,26 @@ public class FlowCounter {
     private static final String CURRENT_TIME = "ctime";
     private static final String COUNT = "count";
 
-    private static final List<String> ATTR_LIST = Lists.newArrayList(COUNT_TOPIC,COUNT_TABLE,COUNT_FROM,
-            COUNT_PERIOD, CURRENT_TIME,COUNT);
+    private static final List<String> ATTR_LIST = Lists
+        .newArrayList(COUNT_TOPIC, COUNT_TABLE, COUNT_FROM,
+            COUNT_PERIOD, CURRENT_TIME, COUNT);
 
     private static final Map<CounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
-            .maxSize(10000)
-            .expiration(2, TimeUnit.HOURS)
-            .expirationPolicy(ExpirationPolicy.CREATED)
-            .build();
+        .maxSize(10000)
+        .expiration(2, TimeUnit.HOURS)
+        .expirationPolicy(ExpirationPolicy.CREATED)
+        .build();
 
     public static List<ProducerRecord> flowCounterToEvents(boolean useAvro) {
         List<ProducerRecord> records = Lists.newArrayList();
         LOGGER.debug("FlowCounter CACHE_COUNTER: {}", CACHE_COUNTER);
 
         CACHE_COUNTER.forEach((key, value) -> {
-            if (useAvro)
+            if (useAvro) {
                 records.add(buildEachToEvent(key, value));
-            else
+            } else {
                 records.add(buildEachToJsonEvent(key, value));
+            }
         });
         return records;
     }
@@ -95,20 +94,22 @@ public class FlowCounter {
 
 
     public static void increment(String topic, String table, String fromDB,
-                                   String fieldValue) {
+        String fieldValue) {
         String timePeriod = getTimePeriodKey(fieldValue);
         if (timePeriod != null) {
-            CounterKey totalKey  = new CounterKey(topic, table, fromDB, timePeriod);
+            CounterKey totalKey = new CounterKey(topic, table, fromDB, timePeriod);
             incrementByKey(totalKey);
         }
     }
 
     private static String getTimePeriodKey(String timeStamp) {
-        if (timeStamp == null)
+        if (timeStamp == null) {
             return null;
+        }
         // 只支持 数据库中的 datetime和 timestamp 格式
-        if (timeStamp.length() != SUPPORT_TIME_FORMAT.length())
+        if (timeStamp.length() != SUPPORT_TIME_FORMAT.length()) {
             return null;
+        }
         return timeStamp.substring(0, TIME_KEY_FORMAT.length());
     }
 
@@ -120,6 +121,7 @@ public class FlowCounter {
     }
 
     private static class CounterKey {
+
         private final String topic;
         private final String table;
         private final String fromDB;
@@ -135,24 +137,28 @@ public class FlowCounter {
         @Override
         public String toString() {
             return "CounterKey{" +
-                    "topic='" + topic + '\'' +
-                    ", table='" + table + '\'' +
-                    ", fromDB='" + fromDB + '\'' +
-                    ", timePeriod='" + timePeriod + '\'' +
-                    '}';
+                "topic='" + topic + '\'' +
+                ", table='" + table + '\'' +
+                ", fromDB='" + fromDB + '\'' +
+                ", timePeriod='" + timePeriod + '\'' +
+                '}';
         }
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             CounterKey that = (CounterKey) o;
 
             return topic.equals(that.topic)
-                    && table.equals(that.table)
-                    && fromDB.equals(that.fromDB)
-                    && timePeriod.equals(that.timePeriod);
+                && table.equals(that.table)
+                && fromDB.equals(that.fromDB)
+                && timePeriod.equals(that.timePeriod);
 
         }
 

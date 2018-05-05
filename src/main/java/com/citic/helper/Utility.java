@@ -1,9 +1,22 @@
 package com.citic.helper;
 
-import com.google.common.base.Joiner;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -14,17 +27,8 @@ import org.apache.avro.io.JsonEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-
 public class Utility {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
     private static final String DEFAULT_IP = "127.0.0.1";
 
@@ -44,8 +48,9 @@ public class Utility {
                 Enumeration<?> e2 = ni.getInetAddresses();
                 while (e2.hasMoreElements()) {
                     InetAddress ia = (InetAddress) e2.nextElement();
-                    if (ia instanceof Inet6Address)
+                    if (ia instanceof Inet6Address) {
                         continue;
+                    }
                     ip = ia.getHostAddress();
                 }
                 break;
@@ -56,18 +61,18 @@ public class Utility {
 
 
     /*
-    * get schema String
-    * */
+     * get schema String
+     * */
     public static String getTableFieldSchema(List<String> schemaFieldList, String schemaName) {
         StringBuilder builder = new StringBuilder();
         String schema = "{"
-                + "\"type\":\"record\","
-                + "\"name\":\""+ schemaName +"\","
-                + "\"fields\":[";
+            + "\"type\":\"record\","
+            + "\"name\":\"" + schemaName + "\","
+            + "\"fields\":[";
 
         builder.append(schema);
         String prefix = "";
-        for (String fieldStr: schemaFieldList) {
+        for (String fieldStr : schemaFieldList) {
             String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
             builder.append(prefix);
             prefix = ",";
@@ -78,8 +83,8 @@ public class Utility {
     }
 
     /*
-    * avro Record to json string
-    * */
+     * avro Record to json string
+     * */
     public static String avroToJson(GenericRecord avroRecord) {
         JsonEncoder encoder;
         ByteArrayOutputStream output = null;
@@ -96,17 +101,22 @@ public class Utility {
             LOGGER.error("avroToJson error, avroRecord: {}", avroRecord, e);
             return "invalid avro record";
         } finally {
-            try { if (output != null) output.close(); } catch (Exception ignored) { }
+            try {
+                if (output != null) {
+                    output.close();
+                }
+            } catch (Exception ignored) {
+            }
         }
     }
 
     public static byte[] dataToAvroEventBody(Map<String, String> eventData,
-                                             List<String> fieldList,
-                                             String schemaString) {
+        List<String> fieldList,
+        String schemaString) {
         Schema schema = SchemaCache.getSchema(schemaString);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
-        for (String fieldStr: fieldList) {
+        for (String fieldStr : fieldList) {
             avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
         }
 
@@ -114,20 +124,21 @@ public class Utility {
     }
 
     static class Minutes5 {
+
         private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
         private static final Calendar calendar = GregorianCalendar.getInstance();
         private static final SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
 
         private static final LoadingCache<Date, String> formatCache = CacheBuilder
-                .newBuilder()
-                .maximumSize(1000)
-                .expireAfterWrite(6, TimeUnit.MINUTES)
-                .build(new CacheLoader<Date, String>() {
-                            @Override
-                            public String load(Date date) {
-                                return dateFormat.format(date);
-                            }
-                        });
+            .newBuilder()
+            .maximumSize(1000)
+            .expireAfterWrite(6, TimeUnit.MINUTES)
+            .build(new CacheLoader<Date, String>() {
+                @Override
+                public String load(Date date) {
+                    return dateFormat.format(date);
+                }
+            });
 
         static String getCurrentRounded5Minutes() {
             calendar.setTime(new Date());

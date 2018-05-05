@@ -16,35 +16,51 @@
  */
 package com.citic.source.canal;
 
+import static com.citic.source.canal.CanalSourceConstants.BATCH_SIZE;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_BATCH_SIZE;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_PASSWORD;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_SHUTDOWN_FLOW_COUNTER;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_USERNAME;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_WRITE_SQL_TO_DATA;
+import static com.citic.source.canal.CanalSourceConstants.DESTINATION;
+import static com.citic.source.canal.CanalSourceConstants.IP_INTERFACE;
+import static com.citic.source.canal.CanalSourceConstants.PASSWORD;
+import static com.citic.source.canal.CanalSourceConstants.SERVER_URL;
+import static com.citic.source.canal.CanalSourceConstants.SERVER_URLS;
+import static com.citic.source.canal.CanalSourceConstants.SHUTDOWN_FLOW_COUNTER;
+import static com.citic.source.canal.CanalSourceConstants.TABLE_FIELDS_FILTER;
+import static com.citic.source.canal.CanalSourceConstants.TABLE_TO_TOPIC_MAP;
+import static com.citic.source.canal.CanalSourceConstants.USERNAME;
+import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
+import static com.citic.source.canal.CanalSourceConstants.WRITE_SQL_TO_DATA;
+import static com.citic.source.canal.CanalSourceConstants.ZOOKEEPER_SERVERS;
+
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
 import com.google.common.collect.Lists;
-import org.apache.flume.*;
+import java.util.List;
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.FlumeException;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.conf.ConfigurationException;
 import org.apache.flume.source.AbstractPollableSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
-import static com.citic.source.canal.CanalSourceConstants.*;
-
 public class CanalSource extends AbstractPollableSource
-        implements Configurable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CanalSource.class);
+    implements Configurable {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CanalSource.class);
+    private final List<Event> eventsAll = Lists.newArrayList();
     private CanalClient canalClient = null;
     private CanalConf canalConf;
-
-    private final List<Event> eventsAll = Lists.newArrayList();
-
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private EntryConverter entryConverter;
 
     /*
-    * 获取配置
-    * */
+     * 获取配置
+     * */
     private void setCanalConf(Context context) {
         canalConf.setIpInterface(context.getString(IP_INTERFACE));
         canalConf.setServerUrl(context.getString(SERVER_URL));
@@ -56,9 +72,11 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setBatchSize(context.getInteger(BATCH_SIZE, DEFAULT_BATCH_SIZE));
         canalConf.setTableToTopicMap(context.getString(TABLE_TO_TOPIC_MAP));
         canalConf.setTableFieldsFilter(context.getString(TABLE_FIELDS_FILTER));
-        
-        canalConf.setShutdownFlowCounter(context.getBoolean(SHUTDOWN_FLOW_COUNTER, DEFAULT_SHUTDOWN_FLOW_COUNTER));
-        canalConf.setWriteSQLToData(context.getBoolean(WRITE_SQL_TO_DATA, DEFAULT_WRITE_SQL_TO_DATA));
+
+        canalConf.setShutdownFlowCounter(
+            context.getBoolean(SHUTDOWN_FLOW_COUNTER, DEFAULT_SHUTDOWN_FLOW_COUNTER));
+        canalConf
+            .setWriteSQLToData(context.getBoolean(WRITE_SQL_TO_DATA, DEFAULT_WRITE_SQL_TO_DATA));
     }
 
     @Override
@@ -70,20 +88,22 @@ public class CanalSource extends AbstractPollableSource
 
         setCanalConf(context);
         // TABLE_TO_TOPIC_MAP 配置不能为空
-        if (canalConf.getTableToTopicMap() == null || canalConf.getTableToTopicMap().isEmpty()){
+        if (canalConf.getTableToTopicMap() == null || canalConf.getTableToTopicMap().isEmpty()) {
             throw new ConfigurationException(String.format("%s cannot be empty or null",
-                    TABLE_TO_TOPIC_MAP));
+                TABLE_TO_TOPIC_MAP));
         }
 
         if (!canalConf.isConnectionUrlValid()) {
-            throw new ConfigurationException(String.format("\"%s\",\"%s\" AND \"%s\" at least one must be specified!",
+            throw new ConfigurationException(
+                String.format("\"%s\",\"%s\" AND \"%s\" at least one must be specified!",
                     ZOOKEEPER_SERVERS,
                     SERVER_URL,
                     SERVER_URLS));
         }
 
-        if (sourceCounter == null)
+        if (sourceCounter == null) {
             sourceCounter = new org.apache.flume.instrumentation.SourceCounter(getName());
+        }
 
         entryConverter = new EntryConverter(useAvro, canalConf);
     }
@@ -111,12 +131,13 @@ public class CanalSource extends AbstractPollableSource
             message = canalClient.fetchRows(canalConf.getBatchSize());
         } catch (Exception e) {
             LOGGER.error("Exceptions occurs when canal client fetching messages, message is {}",
-                    e.getMessage(), e);
+                e.getMessage(), e);
             return Status.BACKOFF;
         }
 
-        if (message == null)
+        if (message == null) {
             return Status.BACKOFF;
+        }
 
         for (CanalEntry.Entry entry : message.getEntries()) {
             List<Event> events = entryConverter.convert(entry, canalConf);
@@ -131,8 +152,8 @@ public class CanalSource extends AbstractPollableSource
         } catch (Exception e) {
             this.canalClient.rollback(message.getId());
             LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
-                    e.getMessage(), e);
-            
+                e.getMessage(), e);
+
             eventsAll.clear();
             return Status.BACKOFF;
         }

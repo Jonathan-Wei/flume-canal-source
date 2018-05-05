@@ -1,7 +1,15 @@
 package com.citic.helper;
 
+import static com.citic.source.canal.CanalSourceConstants.GSON;
+import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
 import org.apache.avro.Schema;
@@ -10,15 +18,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static com.citic.source.canal.CanalSourceConstants.GSON;
-import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 
 public class AgentCounter {
@@ -31,14 +30,15 @@ public class AgentCounter {
     private static final String COUNT_PERIOD = "period";
     private static final String COUNT = "count";
 
-    private static final List<String> ATTR_LIST = Lists.newArrayList(COUNT_AGENT, COUNT_PERIOD, COUNT);
+    private static final List<String> ATTR_LIST = Lists
+        .newArrayList(COUNT_AGENT, COUNT_PERIOD, COUNT);
 
 
     private static final Map<CounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
-            .maxSize(10000)
-            .expiration(10, TimeUnit.MINUTES)
-            .expirationPolicy(ExpirationPolicy.CREATED)
-            .build();
+        .maxSize(10000)
+        .expiration(10, TimeUnit.MINUTES)
+        .expirationPolicy(ExpirationPolicy.CREATED)
+        .build();
 
 
     public static List<ProducerRecord> flowCounterToEvents(boolean useAvro) {
@@ -46,10 +46,11 @@ public class AgentCounter {
         LOGGER.debug("AgentCounter CACHE_COUNTER: {}", CACHE_COUNTER);
 
         CACHE_COUNTER.forEach((key, value) -> {
-            if (useAvro)
+            if (useAvro) {
                 records.add(buildEachToEvent(key, value));
-            else
+            } else {
                 records.add(buildEachToJsonEvent(key, value));
+            }
         });
         return records;
     }
@@ -93,6 +94,7 @@ public class AgentCounter {
     }
 
     private static class CounterKey {
+
         private final String AgentIp;
         private final String minuteKey;
 
@@ -103,8 +105,12 @@ public class AgentCounter {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             CounterKey that = (CounterKey) o;
 
@@ -122,9 +128,9 @@ public class AgentCounter {
         @Override
         public String toString() {
             return "CounterKey{" +
-                    "AgentIp='" + AgentIp + '\'' +
-                    ", minuteKey='" + minuteKey + '\'' +
-                    '}';
+                "AgentIp='" + AgentIp + '\'' +
+                ", minuteKey='" + minuteKey + '\'' +
+                '}';
         }
     }
 }

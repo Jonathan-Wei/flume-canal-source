@@ -1,25 +1,29 @@
 package com.citic.helper;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.*;
+import org.apache.avro.io.BinaryDecoder;
+import org.apache.avro.io.BinaryEncoder;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.EncoderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-
 public class AvroRecordSerDe {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroRecordSerDe.class);
 
     private static BinaryDecoder decoder;
     private static BinaryEncoder encoder;
 
     public static GenericRecord deserialize(byte[] bytes, Schema schema) {
-        DatumReader<GenericRecord>  datumReader = new GenericDatumReader<>(schema);
+        DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
         decoder = DecoderFactory.get().binaryDecoder(bytes, decoder);
         try {
             return datumReader.read(null, decoder);

@@ -21,16 +21,18 @@ import com.citic.helper.Utility;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.*;
+import com.google.common.collect.Lists;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.*;
-
 class CanalConf {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
     private String agentIPAddress;
     private String zkServers;
@@ -52,125 +54,8 @@ class CanalConf {
     private Map<String, String> tableToTopicRegexMap = new RegexHashMap<>();
     private List<String> filterTableList = Lists.newArrayList();
 
-
-    void setTableFieldsFilter(String tableFieldsFilter){
-        this.tableFieldsFilter = tableFieldsFilter;
-    }
-
-    String getTableFieldsFilter(){
-        return this.tableFieldsFilter;
-    }
-
-    void setTableToTopicMap(String tableToTopicMap){
-        this.tableToTopicMap = tableToTopicMap;
-        splitTableToTopicMap(tableToTopicMap);
-    }
-
-    String getTableToTopicMap(){
-        return this.tableToTopicMap;
-    }
-
-    String getFromDBIP() {
-        return this.fromDBIP;
-    }
-
-    private void splitTableToTopicMap(String tableToTopicMap) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
-        Splitter.on(';')
-                .omitEmptyStrings()
-                .trimResults()
-                .split(tableToTopicMap)
-                .forEach(item ->{
-                    String[] result =  item.split(":");
-
-                    Preconditions.checkArgument(result.length >= 2,
-                            "tableToTopicMap format incorrect json: db.tbl1:topic1;db.tbl2:topic2 " +
-                                    "avro: db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
-
-                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
-                            "db.table cannot empty");
-                    Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
-                            "topic cannot empty");
-
-                    filterTableList.add(result[0].trim());
-                    // db.table -> topic
-                    this.tableToTopicRegexMap.put(result[0].trim(), result[1].trim());
-                });
-    }
-
-    /*
-    * 根据表名获取 topic
-    * */
-    String getTableTopic(String schemaTableName) {
-        if (this.tableToTopicRegexMap != null)
-            return this.tableToTopicRegexMap.getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
-        else
-            return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
-    }
-
-    void setZkServers(String zkServers) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(zkServers), "zkServers cannot empty");
-        this.zkServers = zkServers;
-    }
-
-    void setDestination(String destination) {
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(destination), "destination cannot empty");
-        this.destination = destination;
-        // destination example: 192_168_2_24-3306
-        this.fromDBIP = this.destination.replace("-", ":").replace("_", ".");
-    }
-
-    boolean isWriteSQLToData() { return writeSQLToData; }
-
-    void setWriteSQLToData(boolean writeSQLToData) { this.writeSQLToData = writeSQLToData; }
-
-    boolean isShutdownFlowCounter() { return shutdownFlowCounter; }
-
-    void setShutdownFlowCounter(boolean shutdownFlowCounter) { this.shutdownFlowCounter = shutdownFlowCounter; }
-
-    String getAgentIPAddress() { return agentIPAddress; };
-
-    String getZkServers() { return zkServers; }
-
-    String getDestination() { return destination;}
-
-    String getUsername() { return username; }
-
-    String getPassword() { return password;}
-
-    int getBatchSize() { return batchSize; }
-
-    String getServerUrl() { return serverUrl; }
-
-    String getServerUrls() { return serverUrls; }
-
-    void setUsername(String username) { this.username = username;}
-
-    void setPassword(String password) { this.password = password;}
-
-    void setBatchSize(int batchSize) { this.batchSize = batchSize; }
-
-    void setServerUrl(String serverUrl) { this.serverUrl = serverUrl; }
-
-    void setIpInterface(String ipInterface) { agentIPAddress = Utility.getLocalIP(ipInterface); }
-
-    void setServerUrls(String serverUrls) { this.serverUrls = serverUrls;}
-
-    /*
-    * 获取需要过滤的表列表
-    * */
-    List<String> getFilterTableList() {
-        return filterTableList;
-    }
-
-    boolean isConnectionUrlValid() {
-        return !(Strings.isNullOrEmpty(this.zkServers)
-                && Strings.isNullOrEmpty(this.serverUrl)
-                && Strings.isNullOrEmpty(this.serverUrls));
-    }
-
     static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws
-            IllegalArgumentException {
+        IllegalArgumentException {
         List<SocketAddress> addresses = new ArrayList<>();
         if (StringUtils.isNotEmpty(serverUrls)) {
             for (String serverUrl : serverUrls.split(",")) {
@@ -178,7 +63,8 @@ class CanalConf {
                     try {
                         addresses.add(convertUrlToSocketAddress(serverUrl));
                     } catch (Exception exception) {
-                        throw new IllegalArgumentException(String.format("The serverUrls are malformed. " +
+                        throw new IllegalArgumentException(
+                            String.format("The serverUrls are malformed. " +
                                 "The ServerUrls : \"%s\" .", serverUrls), exception);
                     }
                 }
@@ -189,15 +75,175 @@ class CanalConf {
         }
     }
 
-    static SocketAddress convertUrlToSocketAddress(String serverUrl) throws IllegalArgumentException,
-            NumberFormatException {
+    static SocketAddress convertUrlToSocketAddress(String serverUrl)
+        throws IllegalArgumentException,
+        NumberFormatException {
         String[] hostAndPort = serverUrl.split(":");
         if (hostAndPort.length == 2 && StringUtils.isNotEmpty(hostAndPort[1])) {
-            int port  = Integer.parseInt(hostAndPort[1]);
+            int port = Integer.parseInt(hostAndPort[1]);
             return new InetSocketAddress(hostAndPort[0], port);
         } else {
-            throw new IllegalArgumentException(String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
+            throw new IllegalArgumentException(
+                String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
                     serverUrl));
         }
+    }
+
+    String getTableFieldsFilter() {
+        return this.tableFieldsFilter;
+    }
+
+    void setTableFieldsFilter(String tableFieldsFilter) {
+        this.tableFieldsFilter = tableFieldsFilter;
+    }
+
+    String getTableToTopicMap() {
+        return this.tableToTopicMap;
+    }
+
+    void setTableToTopicMap(String tableToTopicMap) {
+        this.tableToTopicMap = tableToTopicMap;
+        splitTableToTopicMap(tableToTopicMap);
+    }
+
+    String getFromDBIP() {
+        return this.fromDBIP;
+    }
+
+    private void splitTableToTopicMap(String tableToTopicMap) {
+        Preconditions
+            .checkArgument(!Strings.isNullOrEmpty(tableToTopicMap), "tableToTopicMap cannot empty");
+        Splitter.on(';')
+            .omitEmptyStrings()
+            .trimResults()
+            .split(tableToTopicMap)
+            .forEach(item -> {
+                String[] result = item.split(":");
+
+                Preconditions.checkArgument(result.length >= 2,
+                    "tableToTopicMap format incorrect json: db.tbl1:topic1;db.tbl2:topic2 " +
+                        "avro: db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
+
+                Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
+                    "db.table cannot empty");
+                Preconditions.checkArgument(!Strings.isNullOrEmpty(result[1].trim()),
+                    "topic cannot empty");
+
+                filterTableList.add(result[0].trim());
+                // db.table -> topic
+                this.tableToTopicRegexMap.put(result[0].trim(), result[1].trim());
+            });
+    }
+
+    /*
+     * 根据表名获取 topic
+     * */
+    String getTableTopic(String schemaTableName) {
+        if (this.tableToTopicRegexMap != null) {
+            return this.tableToTopicRegexMap
+                .getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
+        } else {
+            return CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC;
+        }
+    }
+
+    boolean isWriteSQLToData() {
+        return writeSQLToData;
+    }
+
+    void setWriteSQLToData(boolean writeSQLToData) {
+        this.writeSQLToData = writeSQLToData;
+    }
+
+    boolean isShutdownFlowCounter() {
+        return shutdownFlowCounter;
+    }
+
+    void setShutdownFlowCounter(boolean shutdownFlowCounter) {
+        this.shutdownFlowCounter = shutdownFlowCounter;
+    }
+
+    String getAgentIPAddress() {
+        return agentIPAddress;
+    }
+
+    ;
+
+    String getZkServers() {
+        return zkServers;
+    }
+
+    void setZkServers(String zkServers) {
+        Preconditions.checkArgument(!Strings.isNullOrEmpty(zkServers), "zkServers cannot empty");
+        this.zkServers = zkServers;
+    }
+
+    String getDestination() {
+        return destination;
+    }
+
+    void setDestination(String destination) {
+        Preconditions
+            .checkArgument(!Strings.isNullOrEmpty(destination), "destination cannot empty");
+        this.destination = destination;
+        // destination example: 192_168_2_24-3306
+        this.fromDBIP = this.destination.replace("-", ":").replace("_", ".");
+    }
+
+    String getUsername() {
+        return username;
+    }
+
+    void setUsername(String username) {
+        this.username = username;
+    }
+
+    String getPassword() {
+        return password;
+    }
+
+    void setPassword(String password) {
+        this.password = password;
+    }
+
+    int getBatchSize() {
+        return batchSize;
+    }
+
+    void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    String getServerUrl() {
+        return serverUrl;
+    }
+
+    void setServerUrl(String serverUrl) {
+        this.serverUrl = serverUrl;
+    }
+
+    String getServerUrls() {
+        return serverUrls;
+    }
+
+    void setServerUrls(String serverUrls) {
+        this.serverUrls = serverUrls;
+    }
+
+    void setIpInterface(String ipInterface) {
+        agentIPAddress = Utility.getLocalIP(ipInterface);
+    }
+
+    /*
+     * 获取需要过滤的表列表
+     * */
+    List<String> getFilterTableList() {
+        return filterTableList;
+    }
+
+    boolean isConnectionUrlValid() {
+        return !(Strings.isNullOrEmpty(this.zkServers)
+            && Strings.isNullOrEmpty(this.serverUrl)
+            && Strings.isNullOrEmpty(this.serverUrls));
     }
 }

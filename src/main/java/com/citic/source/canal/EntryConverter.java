@@ -18,15 +18,15 @@ package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.flume.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
 
 class EntryConverter {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
 
     private final EntrySQLHandlerInterface sqlHandler;
@@ -48,18 +48,20 @@ class EntryConverter {
     List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
         List<Event> events = new ArrayList<>();
         /*
-        * TODO: 事务相关,暂不做处理
-        * */
+         * TODO: 事务相关,暂不做处理
+         * */
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
-                || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
+            || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
 
             if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
                 CanalEntry.TransactionEnd end = null;
                 try {
                     end = CanalEntry.TransactionEnd.parseFrom(entry.getStoreValue());
                 } catch (InvalidProtocolBufferException e) {
-                    LOGGER.warn("parse transaction end event has an error , data:" +  entry.toString());
-                    throw new RuntimeException("parse event has an error , data:" + entry.toString(), e);
+                    LOGGER.warn(
+                        "parse transaction end event has an error , data:" + entry.toString());
+                    throw new RuntimeException(
+                        "parse event has an error , data:" + entry.toString(), e);
                 }
             }
         }
@@ -70,7 +72,8 @@ class EntryConverter {
                 rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
             } catch (Exception e) {
                 LOGGER.warn("parse row data event has an error , data:" + entry.toString(), e);
-                throw new RuntimeException("parse event has an error , data:" + entry.toString(), e);
+                throw new RuntimeException("parse event has an error , data:" + entry.toString(),
+                    e);
             }
             CanalEntry.EventType eventType = rowChange.getEventType();
             CanalEntry.Header eventHeader = entry.getHeader();
@@ -83,7 +86,8 @@ class EntryConverter {
                 events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
             } else {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
-                    Event dataEvent = this.dataHandler.getDataEvent(rowData, eventHeader, eventType, normalSQL);
+                    Event dataEvent = this.dataHandler
+                        .getDataEvent(rowData, eventHeader, eventType, normalSQL);
                     events.add(dataEvent);
                 }
             }
