@@ -15,6 +15,9 @@ import org.apache.avro.io.EncoderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The type Avro record ser de.
+ */
 public class AvroRecordSerDe {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroRecordSerDe.class);
@@ -22,6 +25,13 @@ public class AvroRecordSerDe {
     private static BinaryDecoder decoder;
     private static BinaryEncoder encoder;
 
+    /**
+     * Deserialize generic record.
+     *
+     * @param bytes the bytes
+     * @param schema the schema
+     * @return the generic record
+     */
     public static GenericRecord deserialize(byte[] bytes, Schema schema) {
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
         decoder = DecoderFactory.get().binaryDecoder(bytes, decoder);
@@ -33,6 +43,13 @@ public class AvroRecordSerDe {
         }
     }
 
+    /**
+     * Serialize byte [ ].
+     *
+     * @param record the record
+     * @param schema the schema
+     * @return the byte [ ]
+     */
     public static byte[] serialize(GenericRecord record, Schema schema) {
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         ByteArrayOutputStream stream = new ByteArrayOutputStream();

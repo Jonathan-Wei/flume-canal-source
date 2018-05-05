@@ -61,8 +61,8 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
         eventMap.put(META_FIELD_TS, DECIMAL_FORMAT_3.format(System.currentTimeMillis() / 1000.0));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
-        eventMap.put(META_FIELD_AGENT, canalConf.getAgentIPAddress());
-        eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
+        eventMap.put(META_FIELD_AGENT, canalConf.getAgentIpAddress());
+        eventMap.put(META_FIELD_FROM, canalConf.getFromDbIp());
         eventMap.put(META_FIELD_SQL, Strings.isNullOrEmpty(sql) ? "no sql" : sql);
         return eventMap;
     }

@@ -22,6 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+/**
+ * The type Flow counter.
+ */
 public class FlowCounter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FlowCounter.class);
@@ -47,6 +50,12 @@ public class FlowCounter {
         .expirationPolicy(ExpirationPolicy.CREATED)
         .build();
 
+    /**
+     * Flow counter to events list.
+     *
+     * @param useAvro the use avro
+     * @return the list
+     */
     public static List<ProducerRecord> flowCounterToEvents(boolean useAvro) {
         List<ProducerRecord> records = Lists.newArrayList();
         LOGGER.debug("FlowCounter CACHE_COUNTER: {}", CACHE_COUNTER);
@@ -69,7 +78,7 @@ public class FlowCounter {
 
         avroRecord.put(COUNT_TOPIC, key.topic);
         avroRecord.put(COUNT_TABLE, key.table);
-        avroRecord.put(COUNT_FROM, key.fromDB);
+        avroRecord.put(COUNT_FROM, key.fromDb);
         avroRecord.put(COUNT_PERIOD, key.timePeriod);
         avroRecord.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         avroRecord.put(COUNT, value.toString());
@@ -78,26 +87,34 @@ public class FlowCounter {
     }
 
     private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
-        byte[] eventBody;
         Map<String, String> eventData = Maps.newHashMap();
 
         eventData.put(COUNT_TOPIC, key.topic);
         eventData.put(COUNT_TABLE, key.table);
-        eventData.put(COUNT_FROM, key.fromDB);
+        eventData.put(COUNT_FROM, key.fromDb);
         eventData.put(COUNT_PERIOD, key.timePeriod);
         eventData.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         eventData.put(COUNT, value.toString());
 
+        byte[] eventBody;
         eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
         return new ProducerRecord<Object, Object>(JSON_FLOW_COUNTER_TOPIC, eventBody);
     }
 
 
-    public static void increment(String topic, String table, String fromDB,
+    /**
+     * Increment.
+     *
+     * @param topic the topic
+     * @param table the table
+     * @param fromDb the from db
+     * @param fieldValue the field value
+     */
+    public static void increment(String topic, String table, String fromDb,
         String fieldValue) {
         String timePeriod = getTimePeriodKey(fieldValue);
         if (timePeriod != null) {
-            CounterKey totalKey = new CounterKey(topic, table, fromDB, timePeriod);
+            CounterKey totalKey = new CounterKey(topic, table, fromDb, timePeriod);
             incrementByKey(totalKey);
         }
     }
@@ -124,24 +141,24 @@ public class FlowCounter {
 
         private final String topic;
         private final String table;
-        private final String fromDB;
+        private final String fromDb;
         private final String timePeriod;
 
-        private CounterKey(String topic, String table, String fromDB, String timePeriod) {
+        private CounterKey(String topic, String table, String fromDb, String timePeriod) {
             this.topic = topic;
             this.table = table;
-            this.fromDB = fromDB;
+            this.fromDb = fromDb;
             this.timePeriod = timePeriod;
         }
 
         @Override
         public String toString() {
-            return "CounterKey{" +
-                "topic='" + topic + '\'' +
-                ", table='" + table + '\'' +
-                ", fromDB='" + fromDB + '\'' +
-                ", timePeriod='" + timePeriod + '\'' +
-                '}';
+            return "CounterKey{"
+                + "topic='" + topic + '\''
+                + ", table='" + table + '\''
+                + ", fromDb='" + fromDb + '\''
+                + ", timePeriod='" + timePeriod + '\''
+                + '}';
         }
 
         @Override
@@ -157,7 +174,7 @@ public class FlowCounter {
 
             return topic.equals(that.topic)
                 && table.equals(that.table)
-                && fromDB.equals(that.fromDB)
+                && fromDb.equals(that.fromDb)
                 && timePeriod.equals(that.timePeriod);
 
         }
@@ -166,7 +183,7 @@ public class FlowCounter {
         public int hashCode() {
             int result = topic.hashCode();
             result = 31 * result + table.hashCode();
-            result = 31 * result + fromDB.hashCode();
+            result = 31 * result + fromDb.hashCode();
             result = 31 * result + timePeriod.hashCode();
             return result;
         }

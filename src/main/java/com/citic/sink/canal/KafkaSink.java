@@ -1,6 +1,5 @@
 package com.citic.sink.canal;
 
-
 import static com.citic.sink.canal.KafkaSinkConstants.ALERT_EVENT_DATA;
 import static com.citic.sink.canal.KafkaSinkConstants.ALERT_EVENT_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.ALERT_EXCEPTION;
@@ -129,13 +128,12 @@ public class KafkaSink extends AbstractSink implements Configurable {
         String eventKey = null;
 
         try {
-            long processedEvents = 0;
-
             transaction = channel.getTransaction();
             transaction.begin();
 
             kafkaFutures.clear();
             long batchStartTime = System.nanoTime();
+            long processedEvents = 0;
             for (; processedEvents < batchSize; processedEvents += 1) {
                 event = channel.take();
 
@@ -157,8 +155,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     eventTopic = headers.get(topicHeader);
                     if (eventTopic == null) {
                         eventTopic = BucketPath.escapeString(topic, event.getHeaders());
-                        logger.debug("{} was set to true but header {} was null. Producing to {}" +
-                                " topic instead.",
+                        logger.debug("{} was set to true but header {} was null. Producing to {}"
+                                + " topic instead.",
                             new Object[]{KafkaSinkConstants.ALLOW_TOPIC_OVERRIDE_HEADER,
                                 topicHeader, eventTopic});
                     }
@@ -244,7 +242,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
             transaction.commit();
 
         } catch (Exception ex) {
-            String errorMsg = "Failed to publish events";
             logger.error("Failed to publish events", ex);
             result = Status.BACKOFF;
             if (transaction != null) {
@@ -257,6 +254,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     throw Throwables.propagate(e);
                 }
             }
+            String errorMsg = "Failed to publish events";
             throw new EventDeliveryException(errorMsg, ex);
         } finally {
             if (transaction != null) {
@@ -293,8 +291,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
 
     /**
-     * We configure the sink and generate properties for the Kafka Producer
-     *
+     * We configure the sink and generate properties for the Kafka Producer.
      * Kafka producer properties is generated as follows: 1. We generate a properties object with
      * some static defaults that can be overridden by Sink configuration 2. We add the configuration
      * users added for Kafka (parameters starting with .kafka. and must be valid Kafka Producer
@@ -407,16 +404,16 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         if (ctx.containsKey(KEY_SERIALIZER_KEY)) {
             logger.warn(
-                "{} is deprecated. Flume now uses the latest Kafka producer which implements " +
-                    "a different interface for serializers. Please use the parameter {}",
+                "{} is deprecated. Flume now uses the latest Kafka producer which implements "
+                    + "a different interface for serializers. Please use the parameter {}",
                 KEY_SERIALIZER_KEY,
                 KAFKA_PRODUCER_PREFIX + ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG);
         }
 
         if (ctx.containsKey(MESSAGE_SERIALIZER_KEY)) {
             logger.warn(
-                "{} is deprecated. Flume now uses the latest Kafka producer which implements " +
-                    "a different interface for serializers. Please use the parameter {}",
+                "{} is deprecated. Flume now uses the latest Kafka producer which implements "
+                    + "a different interface for serializers. Please use the parameter {}",
                 MESSAGE_SERIALIZER_KEY,
                 KAFKA_PRODUCER_PREFIX + ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG);
         }

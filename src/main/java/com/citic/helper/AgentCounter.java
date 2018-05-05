@@ -20,6 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+/**
+ * The type Agent counter.
+ */
 public class AgentCounter {
     private static final Logger LOGGER = LoggerFactory.getLogger(AgentCounter.class);
 
@@ -41,6 +44,12 @@ public class AgentCounter {
         .build();
 
 
+    /**
+     * Flow counter to events list.
+     *
+     * @param useAvro the use avro
+     * @return the list
+     */
     public static List<ProducerRecord> flowCounterToEvents(boolean useAvro) {
         List<ProducerRecord> records = Lists.newArrayList();
         LOGGER.debug("AgentCounter CACHE_COUNTER: {}", CACHE_COUNTER);
@@ -61,7 +70,7 @@ public class AgentCounter {
         Schema schema = SchemaCache.getSchema(schemaString);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
-        avroRecord.put(COUNT_AGENT, key.AgentIp);
+        avroRecord.put(COUNT_AGENT, key.agentIp);
         avroRecord.put(COUNT_PERIOD, key.minuteKey);
         avroRecord.put(COUNT, value.toString());
 
@@ -69,17 +78,22 @@ public class AgentCounter {
     }
 
     private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
-        byte[] eventBody;
         Map<String, String> eventData = Maps.newHashMap();
 
-        eventData.put(COUNT_AGENT, key.AgentIp);
+        eventData.put(COUNT_AGENT, key.agentIp);
         eventData.put(COUNT_PERIOD, key.minuteKey);
         eventData.put(COUNT, value.toString());
 
+        byte[] eventBody;
         eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
         return new ProducerRecord<Object, Object>(JSON_AGENT_COUNTER_TOPIC, eventBody);
     }
 
+    /**
+     * Increment.
+     *
+     * @param agentIp the agent ip
+     */
     public static void increment(String agentIp) {
         String minuteKey = Utility.Minutes5.getCurrentRounded5Minutes();
         CounterKey counterKey = new CounterKey(agentIp, minuteKey);
@@ -95,11 +109,17 @@ public class AgentCounter {
 
     private static class CounterKey {
 
-        private final String AgentIp;
+        private final String agentIp;
         private final String minuteKey;
 
+        /**
+         * Instantiates a new Counter key.
+         *
+         * @param agentIp the agent ip
+         * @param minuteKey the minute key
+         */
         CounterKey(String agentIp, String minuteKey) {
-            AgentIp = agentIp;
+            this.agentIp = agentIp;
             this.minuteKey = minuteKey;
         }
 
@@ -114,23 +134,23 @@ public class AgentCounter {
 
             CounterKey that = (CounterKey) o;
 
-            return AgentIp.equals(that.AgentIp) && minuteKey.equals(that.minuteKey);
+            return agentIp.equals(that.agentIp) && minuteKey.equals(that.minuteKey);
 
         }
 
         @Override
         public int hashCode() {
-            int result = AgentIp.hashCode();
+            int result = agentIp.hashCode();
             result = 31 * result + minuteKey.hashCode();
             return result;
         }
 
         @Override
         public String toString() {
-            return "CounterKey{" +
-                "AgentIp='" + AgentIp + '\'' +
-                ", minuteKey='" + minuteKey + '\'' +
-                '}';
+            return "CounterKey{"
+                + "agentIp='" + agentIp + '\''
+                + ", minuteKey='" + minuteKey + '\''
+                + '}';
         }
     }
 }

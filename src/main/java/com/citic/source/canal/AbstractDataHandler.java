@@ -61,7 +61,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         attr_list = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
             META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
 
-        if (canalConf.isWriteSQLToData()) {
+        if (canalConf.isWriteSqlToData()) {
             attr_list.add(META_FIELD_SQL);
         }
     }
@@ -113,10 +113,10 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             String timeFieldName = this.getTimeFieldName(topic);
             if (timeFieldName != null) {
                 String timeFieldValue = eventData.get(timeFieldName);
-                FlowCounter.increment(topic, keyName, canalConf.getFromDBIP(), timeFieldValue);
+                FlowCounter.increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
             }
             // agent 数据量统计
-            AgentCounter.increment(canalConf.getAgentIPAddress());
+            AgentCounter.increment(canalConf.getAgentIpAddress());
         }
 
         String pk = getPK(rowData);
@@ -168,15 +168,15 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
         }
 
-        if (canalConf.isWriteSQLToData()) {
+        if (canalConf.isWriteSqlToData()) {
             eventMap.put(META_FIELD_SQL, sql == null ? "cannot get sql" : sql);
         }
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
         eventMap.put(META_FIELD_TS, DECIMAL_FORMAT_3.format(System.currentTimeMillis() / 1000.0));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
         eventMap.put(META_FIELD_TYPE, eventType.toString());
-        eventMap.put(META_FIELD_AGENT, canalConf.getAgentIPAddress());
-        eventMap.put(META_FIELD_FROM, canalConf.getFromDBIP());
+        eventMap.put(META_FIELD_AGENT, canalConf.getAgentIpAddress());
+        eventMap.put(META_FIELD_FROM, canalConf.getFromDbIp());
 
         eventMap.putAll(rowDataMap);
         return eventMap;

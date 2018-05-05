@@ -11,26 +11,37 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.regex.Pattern;
 
+/**
+ * The type Regex hash map.
+ *
+ * @param <V> the type parameter
+ */
 public class RegexHashMap<V> implements Map<String, V> {
 
     /**
-     * Map of input to pattern
+     * Map of input to pattern.
      */
     private final Map<String, String> cacheRef = new WeakHashMap<>();
     /**
-     * Map of pattern to value
+     * Map of pattern to value.
      */
     private final Map<String, V> contentMap = new HashMap<>();
     /**
-     * Compiled patterns
+     * Compiled patterns.
      */
     private final List<PatternMatcher> matchers = new ArrayList<PatternMatcher>();
+
     /**
-     *
+     * Instantiates a new Regex hash map.
      */
     public RegexHashMap() {
     }
 
+    /**
+     * The entry point of application.
+     *
+     * @param strings the input arguments
+     */
     public static void main(String... strings) {
         Map<String, String> temp = Maps.newHashMap();
         temp.put("[o|O][s|S][e|E].?[1|2]", "This is a regex match");
@@ -57,8 +68,8 @@ public class RegexHashMap<V> implements Map<String, V> {
     }
 
     /**
-     * Returns the value to which the specified key pattern is mapped, or null if this contentMap
-     * contains no mapping for the key pattern
+     * Returns the value to which the specified key pattern is mapped, or null if this contentMap.
+     * contains no mapping for the key pattern.
      */
     @Override
     public V get(Object weakKey) {
@@ -80,7 +91,7 @@ public class RegexHashMap<V> implements Map<String, V> {
     }
 
     /**
-     * Associates a specified regular expression to a particular value
+     * Associates a specified regular expression to a particular value.
      */
     @Override
     public V put(String key, V value) {
@@ -92,7 +103,7 @@ public class RegexHashMap<V> implements Map<String, V> {
     }
 
     /**
-     * Removes the regular expression key
+     * Removes the regular expression key.
      */
     @Override
     public V remove(Object key) {
@@ -126,7 +137,7 @@ public class RegexHashMap<V> implements Map<String, V> {
     }
 
     /**
-     * Set of view on the regular expression keys
+     * Set of view on the regular expression keys.
      */
     @Override
     public Set<Entry<String, V>> entrySet() {
@@ -182,6 +193,8 @@ public class RegexHashMap<V> implements Map<String, V> {
      * Returns a Set view of the regex matched patterns contained in this contentMap. The set is
      * backed by the contentMap, so changes to the contentMap are reflected in the set, and
      * vice-versa.
+     *
+     * @return the set
      */
     public Set<String> keySetPattern() {
         return cacheRef.keySet();
@@ -193,7 +206,10 @@ public class RegexHashMap<V> implements Map<String, V> {
     }
 
     /**
-     * Produces a contentMap of patterns to values, based on the regex put in this contentMap
+     * Produces a contentMap of patterns to values, based on the regex put in this contentMap.
+     *
+     * @param patterns the patterns
+     * @return the map
      */
     public Map<String, V> transform(List<String> patterns) {
         for (String pattern : patterns) {
@@ -211,11 +227,22 @@ public class RegexHashMap<V> implements Map<String, V> {
         private final String regex;
         private final Pattern compiled;
 
+        /**
+         * Instantiates a new Pattern matcher.
+         *
+         * @param name the name
+         */
         PatternMatcher(String name) {
             regex = name;
             compiled = Pattern.compile(regex);
         }
 
+        /**
+         * Matched boolean.
+         *
+         * @param string the string
+         * @return the boolean
+         */
         boolean matched(String string) {
             if (compiled.matcher(string).matches()) {
                 cacheRef.put(string, regex);

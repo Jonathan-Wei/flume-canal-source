@@ -1,19 +1,4 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 package com.citic.source.canal;
 
 import com.citic.helper.RegexHashMap;
@@ -34,7 +19,7 @@ import org.slf4j.LoggerFactory;
 class CanalConf {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
-    private String agentIPAddress;
+    private String agentIpAddress;
     private String zkServers;
     private String destination;
     private String username;
@@ -42,10 +27,10 @@ class CanalConf {
     private int batchSize;
     private String serverUrl;
     private String serverUrls;
-    private String fromDBIP;
+    private String fromDbIp;
 
     private boolean shutdownFlowCounter;
-    private boolean writeSQLToData;
+    private boolean writeSqlToData;
 
     private String tableToTopicMap;
     private String tableFieldsFilter;
@@ -64,8 +49,8 @@ class CanalConf {
                         addresses.add(convertUrlToSocketAddress(serverUrl));
                     } catch (Exception exception) {
                         throw new IllegalArgumentException(
-                            String.format("The serverUrls are malformed. " +
-                                "The ServerUrls : \"%s\" .", serverUrls), exception);
+                            String.format("The serverUrls are malformed. "
+                                + "The ServerUrls : \"%s\" .", serverUrls), exception);
                     }
                 }
             }
@@ -106,8 +91,8 @@ class CanalConf {
         splitTableToTopicMap(tableToTopicMap);
     }
 
-    String getFromDBIP() {
-        return this.fromDBIP;
+    String getFromDbIp() {
+        return this.fromDbIp;
     }
 
     private void splitTableToTopicMap(String tableToTopicMap) {
@@ -121,8 +106,8 @@ class CanalConf {
                 String[] result = item.split(":");
 
                 Preconditions.checkArgument(result.length >= 2,
-                    "tableToTopicMap format incorrect json: db.tbl1:topic1;db.tbl2:topic2 " +
-                        "avro: db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
+                    "tableToTopicMap format incorrect json: db.tbl1:topic1;db.tbl2:topic2 "
+                        + "avro: db.tbl1:topic1:schema1;db.tbl2:topic2:schema2");
 
                 Preconditions.checkArgument(!Strings.isNullOrEmpty(result[0].trim()),
                     "db.table cannot empty");
@@ -147,12 +132,12 @@ class CanalConf {
         }
     }
 
-    boolean isWriteSQLToData() {
-        return writeSQLToData;
+    boolean isWriteSqlToData() {
+        return writeSqlToData;
     }
 
-    void setWriteSQLToData(boolean writeSQLToData) {
-        this.writeSQLToData = writeSQLToData;
+    void setWriteSqlToData(boolean writeSqlToData) {
+        this.writeSqlToData = writeSqlToData;
     }
 
     boolean isShutdownFlowCounter() {
@@ -163,8 +148,8 @@ class CanalConf {
         this.shutdownFlowCounter = shutdownFlowCounter;
     }
 
-    String getAgentIPAddress() {
-        return agentIPAddress;
+    String getAgentIpAddress() {
+        return agentIpAddress;
     }
 
     ;
@@ -187,7 +172,7 @@ class CanalConf {
             .checkArgument(!Strings.isNullOrEmpty(destination), "destination cannot empty");
         this.destination = destination;
         // destination example: 192_168_2_24-3306
-        this.fromDBIP = this.destination.replace("-", ":").replace("_", ".");
+        this.fromDbIp = this.destination.replace("-", ":").replace("_", ".");
     }
 
     String getUsername() {
@@ -231,7 +216,7 @@ class CanalConf {
     }
 
     void setIpInterface(String ipInterface) {
-        agentIPAddress = Utility.getLocalIP(ipInterface);
+        agentIpAddress = Utility.getLocalIp(ipInterface);
     }
 
     /*

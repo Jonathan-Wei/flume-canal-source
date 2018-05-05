@@ -27,12 +27,21 @@ import org.apache.avro.io.JsonEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The type Utility.
+ */
 public class Utility {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
     private static final String DEFAULT_IP = "127.0.0.1";
 
-    public static String getLocalIP(String interfaceName) {
+    /**
+     * Gets local ip.
+     *
+     * @param interfaceName the interface name
+     * @return the local ip
+     */
+    public static String getLocalIp(String interfaceName) {
         String ip = DEFAULT_IP;
         Enumeration<?> e1;
         try {
@@ -60,9 +69,13 @@ public class Utility {
     }
 
 
-    /*
-     * get schema String
-     * */
+    /**
+     * Gets table field schema.
+     *
+     * @param schemaFieldList the schema field list
+     * @param schemaName the schema name
+     * @return the table field schema
+     */
     public static String getTableFieldSchema(List<String> schemaFieldList, String schemaName) {
         StringBuilder builder = new StringBuilder();
         String schema = "{"
@@ -82,9 +95,12 @@ public class Utility {
         return builder.toString();
     }
 
-    /*
-     * avro Record to json string
-     * */
+    /**
+     * Avro to json string.
+     *
+     * @param avroRecord the avro record
+     * @return the string
+     */
     public static String avroToJson(GenericRecord avroRecord) {
         JsonEncoder encoder;
         ByteArrayOutputStream output = null;
@@ -105,11 +121,20 @@ public class Utility {
                 if (output != null) {
                     output.close();
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage(), e);
             }
         }
     }
 
+    /**
+     * Data to avro event body byte [ ].
+     *
+     * @param eventData the event data
+     * @param fieldList the field list
+     * @param schemaString the schema string
+     * @return the byte [ ]
+     */
     public static byte[] dataToAvroEventBody(Map<String, String> eventData,
         List<String> fieldList,
         String schemaString) {
@@ -123,6 +148,9 @@ public class Utility {
         return AvroRecordSerDe.serialize(avroRecord, schema);
     }
 
+    /**
+     * The type Minutes 5.
+     */
     static class Minutes5 {
 
         private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
@@ -140,6 +168,11 @@ public class Utility {
                 }
             });
 
+        /**
+         * Gets current rounded 5 minutes.
+         *
+         * @return the current rounded 5 minutes
+         */
         static String getCurrentRounded5Minutes() {
             calendar.setTime(new Date());
             int unroundedMinutes = calendar.get(Calendar.MINUTE);

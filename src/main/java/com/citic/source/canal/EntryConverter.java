@@ -1,19 +1,4 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 package com.citic.source.canal;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
@@ -32,7 +17,7 @@ class EntryConverter {
     private final EntrySQLHandlerInterface sqlHandler;
     private final DataHandlerInterface dataHandler;
 
-    private String normalSQL;
+    private String normalSql;
 
     EntryConverter(boolean useAvro, CanalConf canalConf) {
         if (useAvro) {
@@ -80,14 +65,14 @@ class EntryConverter {
 
             // canal 在 QUERY 事件没有做表过滤
             if (eventType == CanalEntry.EventType.QUERY) {
-                normalSQL = rowChange.getSql();
+                normalSql = rowChange.getSql();
             } else if (rowChange.getIsDdl()) {
                 // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
                 events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
             } else {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
                     Event dataEvent = this.dataHandler
-                        .getDataEvent(rowData, eventHeader, eventType, normalSQL);
+                        .getDataEvent(rowData, eventHeader, eventType, normalSql);
                     events.add(dataEvent);
                 }
             }
