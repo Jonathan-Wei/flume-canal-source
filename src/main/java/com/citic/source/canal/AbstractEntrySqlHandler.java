@@ -24,38 +24,34 @@ import java.util.Map;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 
-interface EntrySQLHandlerInterface {
 
-    Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf);
-}
-
-abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
+abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
 
     private static final List<String> ATTR_LIST = Lists
         .newArrayList(META_FIELD_TABLE, META_FIELD_TS,
             META_FIELD_DB, META_FIELD_AGENT, META_FIELD_FROM, META_FIELD_SQL);
-    private final String sql_topic_name;
+    private final String sqlTopicName;
 
-    private AbstractEntrySQLHandler(String sql_topic_name) {
-        this.sql_topic_name = sql_topic_name;
+    private AbstractEntrySqlHandler(String sqlTopicName) {
+        this.sqlTopicName = sqlTopicName;
     }
 
     /*
      * 获取 sql topic Event数据
      * */
     public Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
-        Map<String, String> eventSql = handleSQL(sql, entryHeader, canalConf);
+        Map<String, String> eventSql = handleSql(sql, entryHeader, canalConf);
         Map<String, String> sqlHeader = Maps.newHashMap();
-        sqlHeader.put(DEFAULT_TOPIC_OVERRIDE_HEADER, sql_topic_name);
-        return dataToSQLEvent(eventSql, sqlHeader);
+        sqlHeader.put(DEFAULT_TOPIC_OVERRIDE_HEADER, sqlTopicName);
+        return dataToSqlEvent(eventSql, sqlHeader);
     }
 
-    abstract Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader);
+    abstract Event dataToSqlEvent(Map<String, String> eventData, Map<String, String> eventHeader);
 
     /*
      * 处理 sql topic 的数据格式
      * */
-    private Map<String, String> handleSQL(String sql, CanalEntry.Header entryHeader,
+    private Map<String, String> handleSql(String sql, CanalEntry.Header entryHeader,
         CanalConf canalConf) {
         Map<String, String> eventMap = Maps.newHashMap();
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
@@ -67,7 +63,7 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         return eventMap;
     }
 
-    static class Avro extends AbstractEntrySQLHandler {
+    static class Avro extends AbstractEntrySqlHandler {
 
         private static final String AVRO_SQL_TOPIC = "avro_ddl_sql";
 
@@ -78,7 +74,7 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         /*
          * 将 data, header 转换为 JSON Event 格式
          * */
-        Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
+        Event dataToSqlEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
             String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_SQL_TOPIC);
             byte[] eventBody = Utility.dataToAvroEventBody(eventData, ATTR_LIST, schemaString);
             // 用于sink解析
@@ -87,7 +83,7 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         }
     }
 
-    static class Json extends AbstractEntrySQLHandler {
+    static class Json extends AbstractEntrySqlHandler {
 
         private static final Gson GSON = new Gson();
         private static final String AVRO_SQL_TOPIC = "json_ddl_sql";
@@ -99,7 +95,7 @@ abstract class AbstractEntrySQLHandler implements EntrySQLHandlerInterface {
         }
 
         @Override
-        Event dataToSQLEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
+        Event dataToSqlEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
             byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE)
                 .getBytes(Charset.forName("UTF-8"));
             return EventBuilder.withBody(eventBody, eventHeader);

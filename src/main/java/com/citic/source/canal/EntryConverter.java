@@ -14,17 +14,17 @@ class EntryConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
 
-    private final EntrySQLHandlerInterface sqlHandler;
+    private final EntrySqlHandlerInterface sqlHandler;
     private final DataHandlerInterface dataHandler;
 
     private String normalSql;
 
     EntryConverter(boolean useAvro, CanalConf canalConf) {
         if (useAvro) {
-            this.sqlHandler = new AbstractEntrySQLHandler.Avro();
+            this.sqlHandler = new AbstractEntrySqlHandler.Avro();
             this.dataHandler = new AbstractDataHandler.Avro(canalConf);
         } else {
-            this.sqlHandler = new AbstractEntrySQLHandler.Json();
+            this.sqlHandler = new AbstractEntrySqlHandler.Json();
             this.dataHandler = new AbstractDataHandler.Json(canalConf);
         }
 

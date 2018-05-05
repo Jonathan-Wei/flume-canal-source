@@ -40,36 +40,28 @@ import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-interface DataHandlerInterface {
-
-    Event getDataEvent(CanalEntry.RowData rowData,
-        CanalEntry.Header entryHeader,
-        CanalEntry.EventType eventType,
-        String sql);
-}
-
 abstract class AbstractDataHandler implements DataHandlerInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
 
     private final CanalConf canalConf;
-    private final List<String> attr_list;
+    private final List<String> attrList;
 
     private AbstractDataHandler(CanalConf canalConf) {
         this.canalConf = canalConf;
 
-        attr_list = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
+        attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
             META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
 
         if (canalConf.isWriteSqlToData()) {
-            attr_list.add(META_FIELD_SQL);
+            attrList.add(META_FIELD_SQL);
         }
     }
 
     /*
      * 获取表的主键,用于kafka的分区key
      * */
-    private static String getPK(CanalEntry.RowData rowData) {
+    private static String getPk(CanalEntry.RowData rowData) {
         StringBuilder pk = null;
         for (CanalEntry.Column column : rowData.getAfterColumnsList()) {
             if (column.getIsKey()) {
@@ -119,7 +111,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             AgentCounter.increment(canalConf.getAgentIpAddress());
         }
 
-        String pk = getPK(rowData);
+        String pk = getPk(rowData);
         // 处理 event Header
         LOGGER.debug("RowData pk:{}", pk);
         Map<String, String> header = handleRowDataHeader(topic, pk);
@@ -345,7 +337,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             // schemaFieldList and ATTR_LIST are same List<String> type
             @SuppressWarnings("unchecked")
             String schemaString = Utility
-                .getTableFieldSchema(ListUtils.union(schemaFieldList, super.attr_list), schemaName);
+                .getTableFieldSchema(ListUtils.union(schemaFieldList, super.attrList), schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
 
             GenericRecord avroRecord = new GenericData.Record(schema);
@@ -355,17 +347,16 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                 avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
             }
 
-            for (String fieldStr : super.attr_list) {
+            for (String fieldStr : super.attrList) {
                 avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
             }
-
-            byte[] eventBody = AvroRecordSerDe.serialize(avroRecord, schema);
 
             // 用于sink解析
             eventHeader.put(SCHEMA_HEADER, schemaString);
             LOGGER.debug("event data: {}", avroRecord);
             LOGGER.debug("event header: {}", eventHeader);
 
+            byte[] eventBody = AvroRecordSerDe.serialize(avroRecord, schema);
             return EventBuilder.withBody(eventBody, eventHeader);
         }
     }
@@ -396,7 +387,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
                 // schemaFieldList and ATTR_LIST are same List<String> type
                 @SuppressWarnings("unchecked")
-                List<String> unionList = ListUtils.union(tableFields, super.attr_list);
+                List<String> unionList = ListUtils.union(tableFields, super.attrList);
                 unionList.forEach(fieldName -> {
                     filterTableData.put((String) fieldName, eventData.getOrDefault(fieldName, ""));
                 });
@@ -462,9 +453,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             List<String> tableFields = topicToTableFields.get(topic);
             if (tableFields == null || tableFields.size() == 0) {
                 return null;
-            } else
-            // 默认首个字段为时间字段
-            {
+            } else {
+                // 默认首个字段为时间字段
                 return tableFields.get(0);
             }
 
