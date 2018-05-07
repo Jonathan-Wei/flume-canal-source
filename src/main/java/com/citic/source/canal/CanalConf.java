@@ -152,8 +152,6 @@ class CanalConf {
         return agentIpAddress;
     }
 
-    ;
-
     String getZkServers() {
         return zkServers;
     }

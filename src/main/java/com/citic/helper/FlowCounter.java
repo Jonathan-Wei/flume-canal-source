@@ -123,11 +123,12 @@ public class FlowCounter {
         if (timeStamp == null) {
             return null;
         }
-        // 只支持 数据库中的 datetime和 timestamp 格式
-        if (timeStamp.length() != SUPPORT_TIME_FORMAT.length()) {
+
+        if (timeStamp.length() >= SUPPORT_TIME_FORMAT.length()) {
+            return timeStamp.substring(0, TIME_KEY_FORMAT.length());
+        } else {
             return null;
         }
-        return timeStamp.substring(0, TIME_KEY_FORMAT.length());
     }
 
     private static long incrementByKey(CounterKey key) {
