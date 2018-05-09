@@ -1,5 +1,7 @@
 package com.citic.helper;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -9,6 +11,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -112,7 +115,7 @@ public class Utility {
             writer.write(avroRecord, encoder);
             encoder.flush();
             output.flush();
-            return new String(output.toByteArray());
+            return new String(output.toByteArray(), UTF_8);
         } catch (IOException e) {
             LOGGER.error("avroToJson error, avroRecord: {}", avroRecord, e);
             return "invalid avro record";
@@ -174,12 +177,13 @@ public class Utility {
          * @return the current rounded 5 minutes
          */
         static String getCurrentRounded5Minutes() {
-            calendar.setTime(new Date());
-            int unroundedMinutes = calendar.get(Calendar.MINUTE);
-            calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));
-            calendar.set(Calendar.SECOND, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-
+            synchronized(calendar) {
+                calendar.setTime(new Date());
+                int unroundedMinutes = calendar.get(Calendar.MINUTE);
+                calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+            }
             return formatCache.getUnchecked(calendar.getTime());
         }
     }

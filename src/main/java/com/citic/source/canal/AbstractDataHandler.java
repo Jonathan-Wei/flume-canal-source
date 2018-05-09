@@ -181,7 +181,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         CanalEntry.Header entryHeader) {
         Map<String, String> rowMap = Maps.newHashMap();
 
-        String keyName = entryHeader.getSchemaName() + '.' + entryHeader.getTableName();
         for (CanalEntry.Column column : columns) {
             int sqlType = column.getSqlType();
             String stringValue = column.getValue();

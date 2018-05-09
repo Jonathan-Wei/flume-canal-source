@@ -20,7 +20,7 @@ class SendCountMonitor {
     private static final int AGENT_COUNTER_REPORT_INTERVAL = 5;
 
 
-    private final String sendCountInterval;
+    private final int flowCountInterval;
     private final KafkaProducer<Object, Object> producer;
     private final List<Future<RecordMetadata>> kafkaFutures;
     private final boolean useAvro;
@@ -30,22 +30,21 @@ class SendCountMonitor {
     SendCountMonitor(KafkaProducer<Object, Object> producer,
         List<Future<RecordMetadata>> kafkaFutures,
         boolean useAvro,
-        String sendCountInterval) {
+        int flowCountInterval) {
         this.producer = producer;
         this.kafkaFutures = kafkaFutures;
         this.useAvro = useAvro;
-        this.sendCountInterval = sendCountInterval;
+        this.flowCountInterval = flowCountInterval;
     }
 
     void start() {
         // 进程检查时间间隔
-        int flowCounterInterval = Integer.parseInt(sendCountInterval);
         executorService = Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setNameFormat("send-count-%d")
                 .build());
         // 分两个线程单独监控
         executorService.scheduleAtFixedRate(new SendFlowCounterRunnable(), 0,
-            flowCounterInterval, TimeUnit.MINUTES);
+            flowCountInterval, TimeUnit.MINUTES);
 
         executorService.scheduleAtFixedRate(new SendAgentCounterRunnable(), 0,
             AGENT_COUNTER_REPORT_INTERVAL, TimeUnit.MINUTES);

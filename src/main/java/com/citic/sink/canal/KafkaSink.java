@@ -88,6 +88,8 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * header properties (per event): topic key
  */
+
+@javax.annotation.concurrent.NotThreadSafe
 public class KafkaSink extends AbstractSink implements Configurable {
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaSink.class);
@@ -106,7 +108,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private String topicHeader = null;
     private File kafkaSendErrorFile;
     private SendCountMonitor sendCountMonitor;
-    private String countMonitorInterval;
+    private int countMonitorInterval;
 
 
     //For testing
@@ -166,12 +168,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
                 eventKey = headers.get(KEY_HEADER);
                 if (logger.isTraceEnabled()) {
-                    if (LogPrivacyUtil.allowLogRawData()) {
-                        logger.trace("{Event} " + eventTopic + " : " + eventKey + " : "
-                            + eventBody);
-                    } else {
-                        logger.trace("{Event} " + eventTopic + " : " + eventKey);
-                    }
+                    logger.trace("{Event} " + eventTopic + " : " + eventKey);
                 }
                 logger.debug("event #{}", processedEvents);
 
@@ -241,9 +238,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
             transaction.commit();
 
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception ex) {
             logger.error("Failed to publish events", ex);
-            result = Status.BACKOFF;
             if (transaction != null) {
                 try {
                     kafkaFutures.clear();
@@ -291,11 +289,11 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
 
     /**
-     * We configure the sink and generate properties for the Kafka Producer.
-     * Kafka producer properties is generated as follows: 1. We generate a properties object with
-     * some static defaults that can be overridden by Sink configuration 2. We add the configuration
-     * users added for Kafka (parameters starting with .kafka. and must be valid Kafka Producer
-     * properties 3. We add the sink's documented parameters which can override other properties
+     * We configure the sink and generate properties for the Kafka Producer. Kafka producer
+     * properties is generated as follows: 1. We generate a properties object with some static
+     * defaults that can be overridden by Sink configuration 2. We add the configuration users added
+     * for Kafka (parameters starting with .kafka. and must be valid Kafka Producer properties 3. We
+     * add the sink's documented parameters which can override other properties
      */
     @Override
     public void configure(Context context) {
@@ -330,6 +328,9 @@ public class KafkaSink extends AbstractSink implements Configurable {
         topicHeader = context.getString(KafkaSinkConstants.TOPIC_OVERRIDE_HEADER,
             KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER);
 
+        countMonitorInterval = context
+            .getInteger(COUNT_MONITOR_INTERVAL, DEFAULT_COUNT_MONITOR_INTERVAL);
+
         if (logger.isDebugEnabled()) {
             logger.debug(KafkaSinkConstants.AVRO_EVENT + " set to: {}", useAvroEventFormat);
         }
@@ -356,9 +357,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 .getString(KafkaSinkConstants.SEND_ERROR_FILE, SEND_ERROR_FILE_DEFAULT);
             kafkaSendErrorFile = new File(fileName);
         }
-
-        countMonitorInterval = context
-            .getString(COUNT_MONITOR_INTERVAL, DEFAULT_COUNT_MONITOR_INTERVAL);
     }
 
     private void translateOldProps(Context ctx) {

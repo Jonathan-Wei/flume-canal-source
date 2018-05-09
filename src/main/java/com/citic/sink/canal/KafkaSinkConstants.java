@@ -23,7 +23,7 @@ public class KafkaSinkConstants {
 
 
     public static final String COUNT_MONITOR_INTERVAL = "countMonitorInterval";
-    public static final String DEFAULT_COUNT_MONITOR_INTERVAL = "5";
+    public static final int DEFAULT_COUNT_MONITOR_INTERVAL = 5;
 
 
     public static final String SCHEMA_REGISTRY_URL = KAFKA_PREFIX + "registryUrl";
