@@ -83,7 +83,8 @@ public class FlowCounter {
         avroRecord.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         avroRecord.put(COUNT, value.toString());
 
-        return new ProducerRecord<Object, Object>(AVRO_FLOW_COUNTER_TOPIC, avroRecord);
+        return new ProducerRecord<Object, Object>(AVRO_FLOW_COUNTER_TOPIC, key.timePeriod,
+            avroRecord);
     }
 
     private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
@@ -98,7 +99,8 @@ public class FlowCounter {
 
         byte[] eventBody;
         eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
-        return new ProducerRecord<Object, Object>(JSON_FLOW_COUNTER_TOPIC, eventBody);
+        return new ProducerRecord<Object, Object>(JSON_FLOW_COUNTER_TOPIC, key.timePeriod,
+            eventBody);
     }
 
 

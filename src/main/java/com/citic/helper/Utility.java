@@ -177,7 +177,7 @@ public class Utility {
          * @return the current rounded 5 minutes
          */
         static String getCurrentRounded5Minutes() {
-            synchronized(calendar) {
+            synchronized (calendar) {
                 calendar.setTime(new Date());
                 int unroundedMinutes = calendar.get(Calendar.MINUTE);
                 calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));

@@ -74,7 +74,8 @@ public class AgentCounter {
         avroRecord.put(COUNT_PERIOD, key.minuteKey);
         avroRecord.put(COUNT, value.toString());
 
-        return new ProducerRecord<Object, Object>(AVRO_AGENT_COUNTER_TOPIC, avroRecord);
+        return new ProducerRecord<Object, Object>(AVRO_AGENT_COUNTER_TOPIC, key.minuteKey,
+            avroRecord);
     }
 
     private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
@@ -86,7 +87,8 @@ public class AgentCounter {
 
         byte[] eventBody;
         eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
-        return new ProducerRecord<Object, Object>(JSON_AGENT_COUNTER_TOPIC, eventBody);
+        return new ProducerRecord<Object, Object>(JSON_AGENT_COUNTER_TOPIC, key.minuteKey,
+            eventBody);
     }
 
     /**
