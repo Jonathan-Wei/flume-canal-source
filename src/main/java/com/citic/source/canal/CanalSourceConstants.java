@@ -28,6 +28,7 @@ public class CanalSourceConstants {
     static final boolean DEFAULT_WRITE_SQL_TO_DATA = false;
     static final String DEFAULT_NOT_MAP_TOPIC = "cannot_map";
     static final int DEFAULT_BATCH_SIZE = 1024;
+    static final int MIN_BATCH_SIZE = 64;
     static final String DEFAULT_USERNAME = "";
     static final String DEFAULT_PASSWORD = "";
     static final String META_FIELD_TABLE = "__table";

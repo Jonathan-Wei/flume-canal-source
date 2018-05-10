@@ -8,6 +8,7 @@ import static com.citic.source.canal.CanalSourceConstants.DEFAULT_USERNAME;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_WRITE_SQL_TO_DATA;
 import static com.citic.source.canal.CanalSourceConstants.DESTINATION;
 import static com.citic.source.canal.CanalSourceConstants.IP_INTERFACE;
+import static com.citic.source.canal.CanalSourceConstants.MIN_BATCH_SIZE;
 import static com.citic.source.canal.CanalSourceConstants.PASSWORD;
 import static com.citic.source.canal.CanalSourceConstants.SERVER_URL;
 import static com.citic.source.canal.CanalSourceConstants.SERVER_URLS;
@@ -138,7 +139,11 @@ public class CanalSource extends AbstractPollableSource
             LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
                 e.getMessage(), e);
 
+            //TODO: 考虑动态增加 batch size
+            int reduceBatchSize =   Math.max(canalConf.getBatchSize() / 2, MIN_BATCH_SIZE);
+            canalConf.setBatchSize(reduceBatchSize);
             eventsAll.clear();
+            LOGGER.warn("Current batch size: {}", canalConf.getBatchSize());
             return Status.BACKOFF;
         }
 
