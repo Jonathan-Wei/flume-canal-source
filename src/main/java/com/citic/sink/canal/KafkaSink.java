@@ -35,6 +35,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -447,7 +449,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
         byte[] bytes = event.getBody();
         Schema schema = SchemaCache.getSchema(schemaString);
 
-        return AvroRecordSerDe.deserialize(bytes, schema);
+        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+        return recordInjection.invert(bytes).get();
     }
 
 

@@ -28,6 +28,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.nio.charset.Charset;
 import java.sql.Types;
 import java.util.List;
@@ -357,6 +359,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                 .getTableFieldSchema2(schemaFieldList, super.attrList, schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
 
+            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+
             GenericRecord avroRecord = new GenericData.Record(schema);
 
             for (String fieldStr : schemaFieldList) {
@@ -373,7 +377,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             LOGGER.debug("event data: {}", avroRecord);
             LOGGER.debug("event header: {}", eventHeader);
 
-            byte[] eventBody = AvroRecordSerDe.serialize(avroRecord, schema);
+            byte[] eventBody = recordInjection.apply(avroRecord);
             return EventBuilder.withBody(eventBody, eventHeader);
         }
     }

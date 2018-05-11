@@ -5,6 +5,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -185,8 +187,9 @@ public class Utility {
         for (String fieldStr : fieldList) {
             avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
         }
-
-        return AvroRecordSerDe.serialize(avroRecord, schema);
+        
+        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+        return recordInjection.apply(avroRecord);
     }
 
     /**

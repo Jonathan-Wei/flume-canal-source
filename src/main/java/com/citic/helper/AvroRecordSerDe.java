@@ -32,7 +32,7 @@ public class AvroRecordSerDe {
      * @param schema the schema
      * @return the generic record
      */
-    public static GenericRecord deserialize(byte[] bytes, Schema schema) {
+    private static GenericRecord deserialize(byte[] bytes, Schema schema) {
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>(schema);
         decoder = DecoderFactory.get().binaryDecoder(bytes, decoder);
         try {
@@ -50,7 +50,7 @@ public class AvroRecordSerDe {
      * @param schema the schema
      * @return the byte [ ]
      */
-    public static byte[] serialize(GenericRecord record, Schema schema) {
+    private static byte[] serialize(GenericRecord record, Schema schema) {
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         encoder = EncoderFactory.get().binaryEncoder(stream, encoder);
