@@ -26,11 +26,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import java.nio.charset.Charset;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -96,6 +98,11 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         String sql) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
+
+        if (Strings.isNullOrEmpty(topic)) {
+            return null;
+        }
+
         // 处理行数据
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, sql);
         LOGGER.debug("eventData handleRowData:{}", eventData);
@@ -226,8 +233,11 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         // topic -> schema
         private final Map<String, String> topicToSchemaMap = Maps.newHashMap();
 
+        // topic -> firstSchemaField
+        private final Map<String, String> topicToFirstSchemaField = Maps.newHashMap();
+
         // topic -> schema fields list
-        private final Map<String, List<String>> topicToSchemaFields = Maps.newHashMap();
+        private final Map<String, Set<String>> topicToSchemaFields = Maps.newHashMap();
         // topic,schema_field -> table_field
         private final Table<String, String, String> topicSchemaFieldToTableField = HashBasedTable
             .create();
@@ -285,7 +295,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                     String topic = topicAppendList.get(counter[0]);
                     counter[0] += 1;
 
-                    List<String> schemaFields = Lists.newArrayList();
+                    Set<String> schemaFields = Sets.newHashSet();
+                    final String[] firstSchemaField = {null};
                     Splitter.on(",")
                         .omitEmptyStrings()
                         .trimResults()
@@ -302,25 +313,28 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                                 .checkArgument(!Strings.isNullOrEmpty(fieldTableSchema[1].trim()),
                                     "schema field cannot empty");
 
+                            if (firstSchemaField[0] == null) {
+                                firstSchemaField[0] = fieldTableSchema[1];
+                            }
+
                             schemaFields.add(fieldTableSchema[1]);
                             this.topicSchemaFieldToTableField
                                 .put(topic, fieldTableSchema[1], fieldTableSchema[0]);
 
                         });
+
+                    if (firstSchemaField[0] != null) {
+                        topicToFirstSchemaField.put(topic, firstSchemaField[0]);
+                    }
+
                     topicToSchemaFields.put(topic, schemaFields);
                 });
         }
 
         @Override
         String getTimeFieldName(String topic) {
-            List<String> schemaFields = topicToSchemaFields.get(topic);
-            if (schemaFields == null || schemaFields.size() == 0) {
-                return null;
-            }
-            // 默认首个字段为时间字段
-            return this.topicSchemaFieldToTableField.get(topic, schemaFields.get(0));
+            return topicToFirstSchemaField.get(topic);
         }
-
 
         /*
          * 将 data, header 转换为 Avro Event 格式
@@ -330,13 +344,17 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             Map<String, String> eventHeader,
             String topic) {
 
-            List<String> schemaFieldList = topicToSchemaFields.get(topic);
+            Set<String> schemaFieldList = topicToSchemaFields.get(topic);
+            if (schemaFieldList == null || schemaFieldList.size() == 0) {
+                return null;
+            }
+
             String schemaName = topicToSchemaMap.get(topic);
 
             // schemaFieldList and ATTR_LIST are same List<String> type
             @SuppressWarnings("unchecked")
             String schemaString = Utility
-                .getTableFieldSchema(ListUtils.union(schemaFieldList, super.attrList), schemaName);
+                .getTableFieldSchema2(schemaFieldList, super.attrList, schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
 
             GenericRecord avroRecord = new GenericData.Record(schema);
@@ -361,7 +379,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     }
 
     static class Json extends AbstractDataHandler {
-
         // topic list
         private final List<String> topicAppendList = Lists.newArrayList();
 

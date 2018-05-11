@@ -2,14 +2,14 @@ package com.citic.source.canal;
 
 import static com.citic.source.canal.CanalSourceConstants.BATCH_SIZE;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_BATCH_SIZE;
-import static com.citic.source.canal.CanalSourceConstants.DEFAULT_PASSWORD;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_PSWD;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_SHUTDOWN_FLOW_COUNTER;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_USERNAME;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_WRITE_SQL_TO_DATA;
 import static com.citic.source.canal.CanalSourceConstants.DESTINATION;
 import static com.citic.source.canal.CanalSourceConstants.IP_INTERFACE;
 import static com.citic.source.canal.CanalSourceConstants.MIN_BATCH_SIZE;
-import static com.citic.source.canal.CanalSourceConstants.PASSWORD;
+import static com.citic.source.canal.CanalSourceConstants.PSWD;
 import static com.citic.source.canal.CanalSourceConstants.SERVER_URL;
 import static com.citic.source.canal.CanalSourceConstants.SERVER_URLS;
 import static com.citic.source.canal.CanalSourceConstants.SHUTDOWN_FLOW_COUNTER;
@@ -53,7 +53,7 @@ public class CanalSource extends AbstractPollableSource
         canalConf.setZkServers(context.getString(ZOOKEEPER_SERVERS));
         canalConf.setDestination(context.getString(DESTINATION));
         canalConf.setUsername(context.getString(USERNAME, DEFAULT_USERNAME));
-        canalConf.setPassword(context.getString(PASSWORD, DEFAULT_PASSWORD));
+        canalConf.setPassword(context.getString(PSWD, DEFAULT_PSWD));
         canalConf.setBatchSize(context.getInteger(BATCH_SIZE, DEFAULT_BATCH_SIZE));
         canalConf.setTableToTopicMap(context.getString(TABLE_TO_TOPIC_MAP));
         canalConf.setTableFieldsFilter(context.getString(TABLE_FIELDS_FILTER));

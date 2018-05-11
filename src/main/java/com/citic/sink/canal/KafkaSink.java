@@ -238,8 +238,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
             transaction.commit();
 
-        } catch (RuntimeException e) {
-            throw e;
         } catch (Exception ex) {
             logger.error("Failed to publish events", ex);
             if (transaction != null) {

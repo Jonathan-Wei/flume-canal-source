@@ -17,7 +17,7 @@ public class CanalSourceConstants {
     static final String SERVER_URLS = "serverUrls";
     static final String DESTINATION = "destination";
     static final String USERNAME = "username";
-    static final String PASSWORD = "password";
+    static final String PSWD = "password";
     static final String BATCH_SIZE = "batchSize";
     static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
     static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
@@ -30,7 +30,7 @@ public class CanalSourceConstants {
     static final int DEFAULT_BATCH_SIZE = 1024;
     static final int MIN_BATCH_SIZE = 64;
     static final String DEFAULT_USERNAME = "";
-    static final String DEFAULT_PASSWORD = "";
+    static final String DEFAULT_PSWD = "";
     static final String META_FIELD_TABLE = "__table";
     static final String META_FIELD_TS = "__ts";
     static final String META_FIELD_DB = "__db";

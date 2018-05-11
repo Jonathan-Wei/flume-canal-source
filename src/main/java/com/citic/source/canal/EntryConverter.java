@@ -73,7 +73,10 @@ class EntryConverter {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
                     Event dataEvent = this.dataHandler
                         .getDataEvent(rowData, eventHeader, eventType, normalSql);
-                    events.add(dataEvent);
+
+                    if (dataEvent != null) {
+                        events.add(dataEvent);
+                    }
                 }
             }
         }

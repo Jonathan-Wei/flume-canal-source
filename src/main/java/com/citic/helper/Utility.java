@@ -71,15 +71,16 @@ public class Utility {
         return ip;
     }
 
-
     /**
-     * Gets table field schema.
+     * Gets table field schema 2.
      *
      * @param schemaFieldList the schema field list
+     * @param attrList the attr list
      * @param schemaName the schema name
-     * @return the table field schema
+     * @return the table field schema 2
      */
-    public static String getTableFieldSchema(List<String> schemaFieldList, String schemaName) {
+    public static String getTableFieldSchema2(Iterable<String> schemaFieldList,
+        Iterable<String> attrList, String schemaName) {
         StringBuilder builder = new StringBuilder();
         String schema = "{"
             + "\"type\":\"record\","
@@ -94,9 +95,46 @@ public class Utility {
             prefix = ",";
             builder.append(field);
         }
+
+        for (String fieldStr : attrList) {
+            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
+            builder.append(prefix);
+            prefix = ",";
+            builder.append(field);
+        }
+
         builder.append("]}");
         return builder.toString();
     }
+
+
+    /**
+     * Gets table field schema.
+     *
+     * @param schemaFieldList the schema field list
+     * @param schemaName the schema name
+     * @return the table field schema
+     */
+    public static String getTableFieldSchema(Iterable<String> schemaFieldList, String schemaName) {
+        StringBuilder builder = new StringBuilder();
+        String schema = "{"
+            + "\"type\":\"record\","
+            + "\"name\":\"" + schemaName + "\","
+            + "\"fields\":[";
+
+        builder.append(schema);
+        String prefix = "";
+        for (String fieldStr : schemaFieldList) {
+            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
+            builder.append(prefix);
+            prefix = ",";
+            builder.append(field);
+        }
+
+        builder.append("]}");
+        return builder.toString();
+    }
+
 
     /**
      * Avro to json string.
