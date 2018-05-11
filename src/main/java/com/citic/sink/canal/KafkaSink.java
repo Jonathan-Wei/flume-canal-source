@@ -28,7 +28,6 @@ import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_REGISTRY_URL_NAME;
 import static com.citic.sink.canal.KafkaSinkConstants.SEND_ERROR_FILE_DEFAULT;
 import static com.citic.sink.canal.KafkaSinkConstants.TOPIC_CONFIG;
 
-import com.citic.helper.AvroRecordSerDe;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.Charsets;

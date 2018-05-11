@@ -16,7 +16,6 @@ import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.AgentCounter;
-import com.citic.helper.AvroRecordSerDe;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
@@ -359,8 +358,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                 .getTableFieldSchema2(schemaFieldList, super.attrList, schemaName);
             Schema schema = SchemaCache.getSchema(schemaString);
 
-            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-
             GenericRecord avroRecord = new GenericData.Record(schema);
 
             for (String fieldStr : schemaFieldList) {
@@ -377,12 +374,14 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             LOGGER.debug("event data: {}", avroRecord);
             LOGGER.debug("event header: {}", eventHeader);
 
+            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
             byte[] eventBody = recordInjection.apply(avroRecord);
             return EventBuilder.withBody(eventBody, eventHeader);
         }
     }
 
     static class Json extends AbstractDataHandler {
+
         // topic list
         private final List<String> topicAppendList = Lists.newArrayList();
 
