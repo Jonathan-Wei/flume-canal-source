@@ -10,7 +10,7 @@ public class CanalSourceConstants {
 
     public static final Gson GSON = new Gson();
     public static final Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {}.getType();
-    public static final DecimalFormat DECIMAL_FORMAT_3 = new DecimalFormat(".###");
+    public static final DecimalFormat DECIMAL_FORMAT_3 = new DecimalFormat(".000");
     static final String IP_INTERFACE = "ipInterface";
     static final String ZOOKEEPER_SERVERS = "zkServers";
     static final String SERVER_URL = "serverUrl";

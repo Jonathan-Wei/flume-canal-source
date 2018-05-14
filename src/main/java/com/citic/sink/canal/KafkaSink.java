@@ -43,11 +43,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.flume.Channel;
+import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
@@ -239,7 +241,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
             transaction.commit();
 
-        } catch (Exception ex) {
+        } catch (InterruptedException | ExecutionException | EventDeliveryException
+                    | ChannelException ex) {
             logger.error("Failed to publish events", ex);
             if (transaction != null) {
                 try {
@@ -261,6 +264,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         return result;
     }
+
 
     @Override
     public synchronized void start() {
