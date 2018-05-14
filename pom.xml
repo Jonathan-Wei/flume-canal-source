@@ -36,8 +36,8 @@ limitations under the License.
     </repositories>
 
     <parent>
-        <artifactId>flume-ng-sources</artifactId>
         <groupId>org.apache.flume</groupId>
+        <artifactId>flume-ng-sources</artifactId>
         <version>1.7.0</version>
     </parent>
 
