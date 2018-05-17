@@ -187,7 +187,7 @@ public class Utility {
         for (String fieldStr : fieldList) {
             avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
         }
-        
+
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
         return recordInjection.apply(avroRecord);
     }
@@ -195,10 +195,10 @@ public class Utility {
     /**
      * The type Minutes 5.
      */
-    static class Minutes5 {
+    public static class Minutes5 {
 
         private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
-        private static final Calendar calendar = GregorianCalendar.getInstance();
+        private static final ThreadLocal<Calendar> threadLocalCanendar = new ThreadLocal<>();
         private static final SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
 
         private static final LoadingCache<Date, String> formatCache = CacheBuilder
@@ -217,14 +217,18 @@ public class Utility {
          *
          * @return the current rounded 5 minutes
          */
-        static String getCurrentRounded5Minutes() {
-            synchronized (calendar) {
-                calendar.setTime(new Date());
-                int unroundedMinutes = calendar.get(Calendar.MINUTE);
-                calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));
-                calendar.set(Calendar.SECOND, 0);
-                calendar.set(Calendar.MILLISECOND, 0);
+        public static String getCurrentRounded5Minutes() {
+            Calendar calendar = threadLocalCanendar.get();
+            if (calendar == null) {
+                calendar = GregorianCalendar.getInstance();
+                threadLocalCanendar.set(calendar);
             }
+            calendar.setTime(new Date());
+            int unroundedMinutes = calendar.get(Calendar.MINUTE);
+            calendar.set(Calendar.MINUTE, unroundedMinutes - (unroundedMinutes % 5));
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0);
+
             return formatCache.getUnchecked(calendar.getTime());
         }
     }
