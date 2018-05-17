@@ -241,21 +241,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
             transaction.commit();
 
-        } catch (InterruptedException | ExecutionException | EventDeliveryException
-                    | ChannelException ex) {
-            logger.error("Failed to publish events", ex);
-            if (transaction != null) {
-                try {
-                    kafkaFutures.clear();
-                    transaction.rollback();
-                    counter.incrementRollbackCount();
-                } catch (Exception e) {
-                    logger.error("Transaction rollback failed", e);
-                    throw Throwables.propagate(e);
-                }
-            }
-            String errorMsg = "Failed to publish events";
-            throw new EventDeliveryException(errorMsg, ex);
+        } catch (RuntimeException ex) {
+            handleException(transaction, ex);
+        } catch (Exception ex) {
+            handleException(transaction, ex);
         } finally {
             if (transaction != null) {
                 transaction.close();
@@ -263,6 +252,23 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
 
         return result;
+    }
+
+    private void handleException(Transaction transaction, Exception ex)
+        throws EventDeliveryException {
+        logger.error("Failed to publish events", ex);
+        if (transaction != null) {
+            try {
+                kafkaFutures.clear();
+                transaction.rollback();
+                counter.incrementRollbackCount();
+            } catch (Exception e) {
+                logger.error("Transaction rollback failed", e);
+                throw Throwables.propagate(e);
+            }
+        }
+        String errorMsg = "Failed to publish events";
+        throw new EventDeliveryException(errorMsg, ex);
     }
 
 
