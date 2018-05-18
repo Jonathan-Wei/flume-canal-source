@@ -322,6 +322,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                             if (schemaFields.contains(fieldTableSchema[1])) {
                                 schemaFields.remove(fieldTableSchema[1]);
                                 schemaFields.add(fieldTableSchema[1]);
+                            } else {
+                                schemaFields.add(fieldTableSchema[1]);
                             }
 
                             this.topicSchemaFieldToTableField
