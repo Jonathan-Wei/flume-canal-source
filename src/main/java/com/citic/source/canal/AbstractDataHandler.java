@@ -296,7 +296,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                     String topic = topicAppendList.get(counter[0]);
                     counter[0] += 1;
 
-                    Set<String> schemaFields = Sets.newHashSet();
+                    Set<String> schemaFields = Sets.newLinkedHashSet();
                     final String[] firstSchemaField = {null};
                     Splitter.on(",")
                         .omitEmptyStrings()
@@ -318,7 +318,12 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
                                 firstSchemaField[0] = fieldTableSchema[1];
                             }
 
-                            schemaFields.add(fieldTableSchema[1]);
+                            // 更新时间字段在字段列表中的顺序
+                            if (schemaFields.contains(fieldTableSchema[1])) {
+                                schemaFields.remove(fieldTableSchema[1]);
+                                schemaFields.add(fieldTableSchema[1]);
+                            }
+
                             this.topicSchemaFieldToTableField
                                 .put(topic, fieldTableSchema[1], fieldTableSchema[0]);
 

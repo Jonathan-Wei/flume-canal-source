@@ -127,7 +127,7 @@ public class Utility {
         builder.append(schema);
         String prefix = "";
         for (String fieldStr : schemaFieldList) {
-            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":\"string\" }";
+            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":[\"string\",\"null\"] }";
             builder.append(prefix);
             prefix = ",";
             builder.append(field);
