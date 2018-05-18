@@ -45,7 +45,7 @@ public class Test {
 //        test.forEach(item -> System.out.println(item));
         List<String> tst = Lists.newArrayList("id","name", "age");
 
-        String test = Utility.getTableFieldSchema(tst, "zhoupeng");
+        String test = Utility.getTableFieldSchema2(tst, tst, "zhoupeng");
         System.out.println(test);
     }
 

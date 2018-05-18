@@ -53,8 +53,8 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
     private AbstractDataHandler(CanalConf canalConf) {
         this.canalConf = canalConf;
 
-        attrList = Lists.newArrayList(META_FIELD_TABLE, META_FIELD_TS,
-            META_FIELD_DB, META_FIELD_TYPE, META_FIELD_AGENT, META_FIELD_FROM);
+        attrList = Lists.newArrayList(META_FIELD_DB, META_FIELD_TABLE, META_FIELD_AGENT,
+            META_FIELD_FROM, META_FIELD_TS, META_FIELD_TYPE);
 
         if (canalConf.isWriteSqlToData()) {
             attrList.add(META_FIELD_SQL);
