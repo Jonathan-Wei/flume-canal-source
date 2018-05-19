@@ -23,7 +23,7 @@ import static com.citic.sink.canal.KafkaSinkConstants.KEY_SERIALIZER_KEY;
 import static com.citic.sink.canal.KafkaSinkConstants.MESSAGE_SERIALIZER_KEY;
 import static com.citic.sink.canal.KafkaSinkConstants.OLD_BATCH_SIZE;
 import static com.citic.sink.canal.KafkaSinkConstants.REQUIRED_ACKS_FLUME_KEY;
-import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_HEADER;
+import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_NAME;
 import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_REGISTRY_URL_NAME;
 import static com.citic.sink.canal.KafkaSinkConstants.SEND_ERROR_FILE_DEFAULT;
 import static com.citic.sink.canal.KafkaSinkConstants.TOPIC_CONFIG;
@@ -43,13 +43,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.flume.Channel;
-import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
@@ -183,7 +181,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 ProducerRecord<Object, Object> record;
                 try {
                     if (useAvroEventFormat) {
-                        dataRecord = serializeAvroEvent(event, headers.get(SCHEMA_HEADER));
+                        dataRecord = serializeAvroEvent(event, headers.get(SCHEMA_NAME));
                     } else {
                         dataRecord = serializeJsonEvent(event);
                     }
@@ -454,9 +452,9 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return kafkaProps;
     }
 
-    private GenericRecord serializeAvroEvent(Event event, String schemaString) throws IOException {
+    private GenericRecord serializeAvroEvent(Event event, String schemaName) throws IOException {
         byte[] bytes = event.getBody();
-        Schema schema = SchemaCache.getSchema(schemaString);
+        Schema schema = SchemaCache.getSchemaSink(schemaName);
 
         Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
         return recordInjection.invert(bytes).get();
@@ -491,8 +489,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         String exceptionInfo, Object dataRecord) {
         List<String> fieldList = Lists
             .newArrayList(ALERT_EVENT_TOPIC, ALERT_EXCEPTION, ALERT_EVENT_DATA);
-        String schemaString = Utility.getTableFieldSchema(fieldList, ALERT_SCHEMA_NAME);
-        Schema schema = SchemaCache.getSchema(schemaString);
+        Schema schema = SchemaCache.getSchema(fieldList, ALERT_SCHEMA_NAME);
         GenericRecord avroRecord = new GenericData.Record(schema);
         avroRecord.put(ALERT_EVENT_TOPIC, eventTopic);
         avroRecord.put(ALERT_EXCEPTION, exceptionInfo);

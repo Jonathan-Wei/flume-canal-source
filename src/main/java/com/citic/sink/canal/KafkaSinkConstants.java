@@ -15,7 +15,7 @@ public class KafkaSinkConstants {
         KAFKA_PREFIX + CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 
     public static final String KEY_HEADER = "key";
-    public static final String SCHEMA_HEADER = "schema";
+    public static final String SCHEMA_NAME = "schema";
     public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = "topic";
 
     public static final String TOPIC_OVERRIDE_HEADER = "topicHeader";

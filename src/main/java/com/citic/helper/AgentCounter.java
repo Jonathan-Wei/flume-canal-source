@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
 import org.apache.avro.Schema;
@@ -66,8 +67,8 @@ public class AgentCounter {
 
 
     private static ProducerRecord buildEachToEvent(CounterKey key, AtomicLong value) {
-        String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_AGENT_COUNTER_TOPIC);
-        Schema schema = SchemaCache.getSchema(schemaString);
+
+        Schema schema = SchemaCache.getSchema(ATTR_LIST, AVRO_AGENT_COUNTER_TOPIC);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
         avroRecord.put(COUNT_AGENT, key.agentIp);

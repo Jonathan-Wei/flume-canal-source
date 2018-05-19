@@ -1,7 +1,7 @@
 package com.citic.source.canal;
 
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER;
-import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_HEADER;
+import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_NAME;
 import static com.citic.source.canal.CanalSourceConstants.DECIMAL_FORMAT_3;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_DB;
@@ -11,16 +11,22 @@ import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TABLE;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TS;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.twitter.bijection.Injection;
+import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 
@@ -75,10 +81,18 @@ abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
          * 将 data, header 转换为 JSON Event 格式
          * */
         Event dataToSqlEvent(Map<String, String> eventData, Map<String, String> eventHeader) {
-            String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_SQL_TOPIC);
-            byte[] eventBody = Utility.dataToAvroEventBody(eventData, ATTR_LIST, schemaString);
+            Schema schema = SchemaCache.getSchema(ATTR_LIST, AVRO_SQL_TOPIC);
+            GenericRecord avroRecord = new GenericData.Record(schema);
+
+            for (String fieldStr : ATTR_LIST) {
+                avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
+            }
+
+            Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
+            byte[] eventBody = recordInjection.apply(avroRecord);
+
             // 用于sink解析
-            eventHeader.put(SCHEMA_HEADER, schemaString);
+            eventHeader.put(SCHEMA_NAME, AVRO_SQL_TOPIC);
             return EventBuilder.withBody(eventBody, eventHeader);
         }
     }

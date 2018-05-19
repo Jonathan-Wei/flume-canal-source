@@ -2,7 +2,7 @@ package com.citic.source.canal;
 
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER;
 import static com.citic.sink.canal.KafkaSinkConstants.KEY_HEADER;
-import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_HEADER;
+import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_NAME;
 import static com.citic.source.canal.CanalSourceConstants.DECIMAL_FORMAT_3;
 import static com.citic.source.canal.CanalSourceConstants.GSON;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
@@ -18,7 +18,6 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.AgentCounter;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
-import com.citic.helper.Utility;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -358,15 +357,10 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             }
 
             String schemaName = topicToSchemaMap.get(topic);
-
-            // schemaFieldList and ATTR_LIST are same List<String> type
-            @SuppressWarnings("unchecked")
-            String schemaString = Utility
-                .getTableFieldSchema2(schemaFieldList, super.attrList, schemaName);
-            Schema schema = SchemaCache.getSchema(schemaString);
+            Schema schema = SchemaCache
+                .getSchema2(schemaFieldList, super.attrList, schemaName);
 
             GenericRecord avroRecord = new GenericData.Record(schema);
-
             for (String fieldStr : schemaFieldList) {
                 String tableField = topicSchemaFieldToTableField.get(topic, fieldStr);
                 avroRecord.put(fieldStr, eventData.getOrDefault(tableField, ""));
@@ -377,7 +371,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             }
 
             // 用于sink解析
-            eventHeader.put(SCHEMA_HEADER, schemaString);
+            eventHeader.put(SCHEMA_NAME, schemaName);
             LOGGER.debug("event data: {}", avroRecord);
             LOGGER.debug("event header: {}", eventHeader);
 

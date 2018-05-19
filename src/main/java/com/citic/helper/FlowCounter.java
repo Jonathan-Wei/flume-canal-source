@@ -71,9 +71,7 @@ public class FlowCounter {
     }
 
     private static ProducerRecord buildEachToEvent(CounterKey key, AtomicLong value) {
-
-        String schemaString = Utility.getTableFieldSchema(ATTR_LIST, AVRO_FLOW_COUNTER_TOPIC);
-        Schema schema = SchemaCache.getSchema(schemaString);
+        Schema schema = SchemaCache.getSchema(ATTR_LIST, AVRO_FLOW_COUNTER_TOPIC);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
         avroRecord.put(COUNT_TOPIC, key.topic);

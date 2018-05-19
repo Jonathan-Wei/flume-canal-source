@@ -5,25 +5,19 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.twitter.bijection.Injection;
-import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
@@ -74,71 +68,6 @@ public class Utility {
     }
 
     /**
-     * Gets table field schema 2.
-     *
-     * @param schemaFieldList the schema field list
-     * @param attrList the attr list
-     * @param schemaName the schema name
-     * @return the table field schema 2
-     */
-    public static String getTableFieldSchema2(Iterable<String> schemaFieldList,
-        Iterable<String> attrList, String schemaName) {
-        StringBuilder builder = new StringBuilder();
-        String schema = "{"
-            + "\"type\":\"record\","
-            + "\"name\":\"" + schemaName + "\","
-            + "\"fields\":[";
-
-        builder.append(schema);
-        String prefix = "";
-        for (String fieldStr : schemaFieldList) {
-            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":[\"string\",\"null\"] }";
-            builder.append(prefix);
-            prefix = ",";
-            builder.append(field);
-        }
-
-        for (String fieldStr : attrList) {
-            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":[\"string\",\"null\"] }";
-            builder.append(prefix);
-            prefix = ",";
-            builder.append(field);
-        }
-
-        builder.append("]}");
-        return builder.toString();
-    }
-
-
-    /**
-     * Gets table field schema.
-     *
-     * @param schemaFieldList the schema field list
-     * @param schemaName the schema name
-     * @return the table field schema
-     */
-    public static String getTableFieldSchema(Iterable<String> schemaFieldList, String schemaName) {
-        StringBuilder builder = new StringBuilder();
-        String schema = "{"
-            + "\"type\":\"record\","
-            + "\"name\":\"" + schemaName + "\","
-            + "\"fields\":[";
-
-        builder.append(schema);
-        String prefix = "";
-        for (String fieldStr : schemaFieldList) {
-            String field = "{ \"name\":\"" + fieldStr + "\", \"type\":[\"string\",\"null\"] }";
-            builder.append(prefix);
-            prefix = ",";
-            builder.append(field);
-        }
-
-        builder.append("]}");
-        return builder.toString();
-    }
-
-
-    /**
      * Avro to json string.
      *
      * @param avroRecord the avro record
@@ -170,27 +99,6 @@ public class Utility {
         }
     }
 
-    /**
-     * Data to avro event body byte [ ].
-     *
-     * @param eventData the event data
-     * @param fieldList the field list
-     * @param schemaString the schema string
-     * @return the byte [ ]
-     */
-    public static byte[] dataToAvroEventBody(Map<String, String> eventData,
-        List<String> fieldList,
-        String schemaString) {
-        Schema schema = SchemaCache.getSchema(schemaString);
-        GenericRecord avroRecord = new GenericData.Record(schema);
-
-        for (String fieldStr : fieldList) {
-            avroRecord.put(fieldStr, eventData.getOrDefault(fieldStr, ""));
-        }
-
-        Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
-        return recordInjection.apply(avroRecord);
-    }
 
     /**
      * The type Minutes 5.
