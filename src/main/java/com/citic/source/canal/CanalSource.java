@@ -24,7 +24,6 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
 import com.google.common.collect.Lists;
 import java.util.List;
-import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.FlumeException;
@@ -43,6 +42,7 @@ public class CanalSource extends AbstractPollableSource
     private CanalConf canalConf;
     private org.apache.flume.instrumentation.SourceCounter sourceCounter;
     private EntryConverter entryConverter;
+    private int errorContinueCounter = 0;
 
     /*
      * 获取配置
@@ -135,10 +135,14 @@ public class CanalSource extends AbstractPollableSource
 
         try {
             getChannelProcessor().processEventBatch(eventsAll);
+            errorContinueCounter = 0;
         } catch (Exception e) {
-            //TODO: 考虑动态增加 batch size
-            int reduceBatchSize = Math.max(canalConf.getBatchSize() - 96, MIN_BATCH_SIZE);
-            canalConf.setBatchSize(reduceBatchSize);
+            errorContinueCounter++;
+            if (errorContinueCounter > 3) {
+                //TODO: 考虑动态增加 batch size
+                int reduceBatchSize = Math.max(canalConf.getBatchSize() - 96, MIN_BATCH_SIZE);
+                canalConf.setBatchSize(reduceBatchSize);
+            }
 
             this.canalClient.rollback(message.getId());
             LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
