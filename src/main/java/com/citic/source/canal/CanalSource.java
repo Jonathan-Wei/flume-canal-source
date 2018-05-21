@@ -133,17 +133,20 @@ public class CanalSource extends AbstractPollableSource
         sourceCounter.addToEventReceivedCount(eventsAll.size());
         sourceCounter.incrementAppendBatchReceivedCount();
 
-        getChannelProcessor().processEventBatch(eventsAll);
-
         try {
             getChannelProcessor().processEventBatch(eventsAll);
-        } catch (ChannelException ex) {
-            return handleProcessError(ex, message);
         } catch (Exception e) {
             //TODO: 考虑动态增加 batch size
             int reduceBatchSize = Math.max(canalConf.getBatchSize() - 96, MIN_BATCH_SIZE);
             canalConf.setBatchSize(reduceBatchSize);
-            return handleProcessError(e, message);
+
+            this.canalClient.rollback(message.getId());
+            LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
+                e.getMessage(), e);
+
+            eventsAll.clear();
+            LOGGER.warn("Current batch size: {}", canalConf.getBatchSize());
+            return Status.BACKOFF;
         }
 
         this.canalClient.ack(message.getId());
@@ -155,15 +158,6 @@ public class CanalSource extends AbstractPollableSource
         return Status.READY;
     }
 
-    private Status handleProcessError(Exception e, Message message) {
-        this.canalClient.rollback(message.getId());
-        LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
-            e.getMessage(), e);
-
-        eventsAll.clear();
-        LOGGER.warn("Current batch size: {}", canalConf.getBatchSize());
-        return Status.BACKOFF;
-    }
 
     @Override
     protected void doStop() throws FlumeException {
