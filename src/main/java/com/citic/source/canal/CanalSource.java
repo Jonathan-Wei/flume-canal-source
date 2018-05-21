@@ -24,6 +24,7 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
 import com.google.common.collect.Lists;
 import java.util.List;
+import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.FlumeException;
@@ -132,19 +133,17 @@ public class CanalSource extends AbstractPollableSource
         sourceCounter.addToEventReceivedCount(eventsAll.size());
         sourceCounter.incrementAppendBatchReceivedCount();
 
+        getChannelProcessor().processEventBatch(eventsAll);
+
         try {
             getChannelProcessor().processEventBatch(eventsAll);
+        } catch (ChannelException ex) {
+            return handleProcessError(ex, message);
         } catch (Exception e) {
-            this.canalClient.rollback(message.getId());
-            LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
-                e.getMessage(), e);
-
             //TODO: 考虑动态增加 batch size
-            int reduceBatchSize =   Math.max(canalConf.getBatchSize() / 2, MIN_BATCH_SIZE);
+            int reduceBatchSize = Math.max(canalConf.getBatchSize() - 96, MIN_BATCH_SIZE);
             canalConf.setBatchSize(reduceBatchSize);
-            eventsAll.clear();
-            LOGGER.warn("Current batch size: {}", canalConf.getBatchSize());
-            return Status.BACKOFF;
+            return handleProcessError(e, message);
         }
 
         this.canalClient.ack(message.getId());
@@ -154,6 +153,16 @@ public class CanalSource extends AbstractPollableSource
         eventsAll.clear();
         LOGGER.debug("Canal ack ok, batch id is {}", message.getId());
         return Status.READY;
+    }
+
+    private Status handleProcessError(Exception e, Message message) {
+        this.canalClient.rollback(message.getId());
+        LOGGER.warn("Exceptions occurs when channel processing batch events, message is {}",
+            e.getMessage(), e);
+
+        eventsAll.clear();
+        LOGGER.warn("Current batch size: {}", canalConf.getBatchSize());
+        return Status.BACKOFF;
     }
 
     @Override
