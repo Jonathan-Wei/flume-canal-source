@@ -438,6 +438,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
             String registryUrl = context.getString(KafkaSinkConstants.SCHEMA_REGISTRY_URL);
             kafkaProps.put(SCHEMA_REGISTRY_URL_NAME, registryUrl);
+            kafkaProps.put("enhanced.avro.schema.support", true);
         } else {
             //Defaults overridden based on config
             kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, DEFAULT_KEY_SERIALIZER);
