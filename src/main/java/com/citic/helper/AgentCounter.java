@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
 import org.apache.avro.Schema;
@@ -25,6 +24,7 @@ import org.slf4j.LoggerFactory;
  * The type Agent counter.
  */
 public class AgentCounter {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(AgentCounter.class);
 
     private static final String AVRO_AGENT_COUNTER_TOPIC = "avro_agent_counter";
@@ -104,10 +104,7 @@ public class AgentCounter {
     }
 
     private static long incrementByKey(CounterKey key) {
-        if (!CACHE_COUNTER.containsKey(key)) {
-            CACHE_COUNTER.put(key, new AtomicLong(0));
-        }
-        return CACHE_COUNTER.get(key).incrementAndGet();
+        return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
     private static class CounterKey {

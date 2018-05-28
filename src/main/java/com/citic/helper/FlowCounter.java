@@ -132,10 +132,7 @@ public class FlowCounter {
     }
 
     private static long incrementByKey(CounterKey key) {
-        if (!CACHE_COUNTER.containsKey(key)) {
-            CACHE_COUNTER.put(key, new AtomicLong(0));
-        }
-        return CACHE_COUNTER.get(key).incrementAndGet();
+        return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
     private static class CounterKey {
