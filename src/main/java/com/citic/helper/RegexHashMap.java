@@ -116,13 +116,7 @@ public class RegexHashMap<V> implements Map<String, V> {
                     break;
                 }
             }
-            for (Iterator<Entry<String, String>> iter = cacheRef.entrySet().iterator();
-                iter.hasNext(); ) {
-                Entry<String, String> entry = iter.next();
-                if (entry.getValue().equals(key)) {
-                    iter.remove();
-                }
-            }
+            cacheRef.entrySet().removeIf(entry -> entry.getValue().equals(key));
         }
         return v;
     }
