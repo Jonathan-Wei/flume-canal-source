@@ -38,4 +38,6 @@ public class CanalSourceConstants {
     static final String META_FIELD_AGENT = "__agent";
     static final String META_FIELD_FROM = "__from";
     static final String META_FIELD_SQL = "__sql";
+
+    static final String SUPPORT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 }

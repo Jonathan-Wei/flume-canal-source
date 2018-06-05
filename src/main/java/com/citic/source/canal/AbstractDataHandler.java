@@ -12,6 +12,7 @@ import static com.citic.source.canal.CanalSourceConstants.META_FIELD_SQL;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TABLE;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TS;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TYPE;
+import static com.citic.source.canal.CanalSourceConstants.SUPPORT_TIME_FORMAT;
 import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
@@ -30,6 +31,8 @@ import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.nio.charset.Charset;
 import java.sql.Types;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +48,7 @@ import org.slf4j.LoggerFactory;
 abstract class AbstractDataHandler implements DataHandlerInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
+    private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
 
     private final CanalConf canalConf;
     private final List<String> attrList;
@@ -108,14 +112,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
         if (!canalConf.isShutdownFlowCounter()) {
-            // topic 数据量统计
-            String timeFieldName = this.getTimeFieldName(topic);
-            if (timeFieldName != null) {
-                String timeFieldValue = eventData.get(timeFieldName);
-                FlowCounter.increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
-            }
-            // agent 数据量统计
-            AgentCounter.increment(canalConf.getAgentIpAddress());
+            doDataCount(topic, keyName, eventData, eventType, entryHeader);
         }
 
         String pk = getPk(rowData);
@@ -124,6 +121,24 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         Map<String, String> header = handleRowDataHeader(topic, pk);
 
         return dataToEvent(eventData, header, topic);
+    }
+
+    private void doDataCount(String topic, String keyName, Map<String, String> eventData,
+        CanalEntry.EventType eventType, CanalEntry.Header entryHeader) {
+        // topic 数据量统计
+        String timeFieldName = this.getTimeFieldName(topic);
+        if (timeFieldName != null) {
+            String timeFieldValue;
+            if (eventType == CanalEntry.EventType.DELETE) {
+                // 删除数据，通过 binlog 执行时间进行统计
+                timeFieldValue = DATE_FORMAT.format(new Date(entryHeader.getExecuteTime()));
+            } else {
+                timeFieldValue = eventData.get(timeFieldName);
+            }
+            FlowCounter.increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
+        }
+        // agent 数据量统计
+        AgentCounter.increment(canalConf.getAgentIpAddress());
     }
 
     abstract Event dataToEvent(Map<String, String> eventData,

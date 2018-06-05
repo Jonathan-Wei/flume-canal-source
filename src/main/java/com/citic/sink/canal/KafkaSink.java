@@ -465,6 +465,9 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return event.getBody();
     }
 
+    /*
+    * 对出错的数据进行处理，并 count 错误日志行数
+    * */
     private void handleErrorData(Object dataRecord) {
         if (dataRecord == null) {
             return;

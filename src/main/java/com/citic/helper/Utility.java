@@ -107,7 +107,6 @@ public class Utility {
 
         private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
         private static final ThreadLocal<Calendar> threadLocalCanendar = new ThreadLocal<>();
-        private static final SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
 
         private static final LoadingCache<Date, String> formatCache = CacheBuilder
             .newBuilder()
@@ -116,6 +115,7 @@ public class Utility {
             .build(new CacheLoader<Date, String>() {
                 @Override
                 public String load(Date date) {
+                    SimpleDateFormat dateFormat = new SimpleDateFormat(TIME_MINUTE_FORMAT);
                     return dateFormat.format(date);
                 }
             });
