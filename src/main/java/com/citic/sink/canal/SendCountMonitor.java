@@ -39,7 +39,7 @@ class SendCountMonitor {
 
     void start() {
         // 进程检查时间间隔
-        executorService = Executors.newSingleThreadScheduledExecutor(
+        executorService = Executors.newScheduledThreadPool(2,
             new ThreadFactoryBuilder().setNameFormat("send-count-%d")
                 .build());
         // 分两个线程单独监控
@@ -51,6 +51,10 @@ class SendCountMonitor {
     }
 
     void stop() {
+        // 关闭前讲内存中统计的数据发送到kafka
+        executorService.submit(new SendFlowCounterRunnable());
+        executorService.submit(new SendAgentCounterRunnable());
+
         executorService.shutdown();
         try {
             while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {

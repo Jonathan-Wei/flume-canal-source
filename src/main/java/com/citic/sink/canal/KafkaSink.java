@@ -286,12 +286,13 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
     @Override
     public synchronized void stop() {
+        // 先发送统计数据再关闭
+        sendCountMonitor.stop();
+
         producer.close();
         counter.stop();
         logger.info("Kafka Sink {} stopped. Metrics: {}", getName(), counter);
         super.stop();
-
-        sendCountMonitor.stop();
     }
 
 
