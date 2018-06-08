@@ -286,6 +286,15 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
     @Override
     public synchronized void stop() {
+        // 发送完channel中的数据再停止
+        try {
+            while (this.process() == Status.READY) {
+            }
+        } catch (Exception ex) {
+            logger.error(ex.getMessage(), ex);
+        }
+        logger.info("send channel data before sink stop.");
+
         // 先发送统计数据再关闭
         sendCountMonitor.stop();
 
@@ -467,8 +476,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
     }
 
     /*
-    * 对出错的数据进行处理，并 count 错误日志行数
-    * */
+     * 对出错的数据进行处理，并 count 错误日志行数
+     * */
     private void handleErrorData(Object dataRecord) {
         if (dataRecord == null) {
             return;
