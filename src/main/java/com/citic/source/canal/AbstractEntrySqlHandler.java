@@ -31,6 +31,9 @@ import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 
 
+/**
+ * The type Abstract entry sql handler.
+ */
 public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
 
     private static final List<String> ATTR_LIST = Lists
@@ -42,9 +45,15 @@ public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterfac
         this.sqlTopicName = sqlTopicName;
     }
 
-    /*
-     * 获取 sql topic Event数据
-     * */
+
+    /**
+     * change sql string to Event.
+     *
+     * @param entryHeader the event header
+     * @param sql sql string
+     * @param canalConf canal config
+     * @return the event
+     */
     public Event getSqlEvent(CanalEntry.Header entryHeader, String sql, CanalConf canalConf) {
         Map<String, String> eventSql = handleSql(sql, entryHeader, canalConf);
         Map<String, String> sqlHeader = Maps.newHashMap();
@@ -52,6 +61,13 @@ public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterfac
         return dataToSqlEvent(eventSql, sqlHeader);
     }
 
+    /**
+     * Data to sql event event.
+     *
+     * @param eventData the event data
+     * @param eventHeader the event header
+     * @return the event
+     */
     abstract Event dataToSqlEvent(Map<String, String> eventData, Map<String, String> eventHeader);
 
     /*
@@ -69,10 +85,16 @@ public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterfac
         return eventMap;
     }
 
+    /**
+     * The type Avro.
+     */
     public static class Avro extends AbstractEntrySqlHandler {
 
         private static final String AVRO_SQL_TOPIC = "avro_ddl_sql";
 
+        /**
+         * Instantiates a new Avro.
+         */
         public Avro() {
             super(AVRO_SQL_TOPIC);
         }
@@ -97,6 +119,9 @@ public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterfac
         }
     }
 
+    /**
+     * The type Json.
+     */
     public static class Json extends AbstractEntrySqlHandler {
 
         private static final Gson GSON = new Gson();
@@ -104,6 +129,9 @@ public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterfac
         private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {
         }.getType();
 
+        /**
+         * Instantiates a new Json.
+         */
         public Json() {
             super(AVRO_SQL_TOPIC);
         }

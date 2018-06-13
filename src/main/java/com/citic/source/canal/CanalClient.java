@@ -27,6 +27,9 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The type Canal client.
+ */
 public class CanalClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalClient.class);
@@ -34,6 +37,12 @@ public class CanalClient {
 
     private CanalConnector canalConnector;
 
+    /**
+     * Instantiates a new Canal client.
+     *
+     * @param canalConf the canal conf
+     * @throws IllegalArgumentException the illegal argument exception
+     */
     public CanalClient(CanalConf canalConf) throws IllegalArgumentException {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
@@ -56,12 +65,21 @@ public class CanalClient {
         }
     }
 
+    /**
+     * Start.
+     */
     public void start() {
         this.canalConnector.connect();
         String filterTables = Joiner.on(",").join(canalConf.getFilterTableList());
         this.canalConnector.subscribe(filterTables);
     }
 
+    /**
+     * Fetch rows message.
+     *
+     * @param batchSize the batch size
+     * @return the message
+     */
     public Message fetchRows(int batchSize) {
         Message message = this.canalConnector.getWithoutAck(batchSize);
 
@@ -75,14 +93,27 @@ public class CanalClient {
         }
     }
 
+    /**
+     * Ack.
+     *
+     * @param batchId the batch id
+     */
     public void ack(long batchId) {
         this.canalConnector.ack(batchId);
     }
 
+    /**
+     * Rollback.
+     *
+     * @param batchId the batch id
+     */
     public void rollback(long batchId) {
         this.canalConnector.rollback(batchId);
     }
 
+    /**
+     * Stop.
+     */
     public void stop() {
         this.canalConnector.disconnect();
     }

@@ -38,6 +38,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+/**
+ * The type Entry converter.
+ */
 public class EntryConverter implements EntryConverterInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
@@ -56,6 +59,11 @@ public class EntryConverter implements EntryConverterInterface {
 
     private final List<String> attrList;
 
+    /**
+     * Instantiates a new Entry converter.
+     *
+     * @param canalConf the canal conf
+     */
     public EntryConverter(CanalConf canalConf) {
         this.canalConf = canalConf;
         this.sqlHandler = new Avro();

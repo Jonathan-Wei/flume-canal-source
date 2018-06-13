@@ -15,6 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+/**
+ * The type Entry converter.
+ */
 public class EntryConverter implements EntryConverterInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
@@ -24,6 +27,12 @@ public class EntryConverter implements EntryConverterInterface {
 
     private String normalSql;
 
+    /**
+     * Instantiates a new Entry converter.
+     *
+     * @param useAvro the use avro
+     * @param canalConf the canal conf
+     */
     public EntryConverter(boolean useAvro, CanalConf canalConf) {
         if (useAvro) {
             this.sqlHandler = new Avro();
@@ -35,6 +44,12 @@ public class EntryConverter implements EntryConverterInterface {
 
     }
 
+    /**
+     * convert entry data to event.
+     *
+     * @param entry canal data entry
+     * @param canalConf the canal conf
+     */
     public List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
         List<Event> events = new ArrayList<>();
 

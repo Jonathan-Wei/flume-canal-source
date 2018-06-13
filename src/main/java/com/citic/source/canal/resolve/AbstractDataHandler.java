@@ -18,8 +18,8 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.AgentCounter;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
-import com.citic.source.canal.core.AbstractCommonDataHandler;
 import com.citic.source.canal.CanalConf;
+import com.citic.source.canal.core.AbstractCommonDataHandler;
 import com.citic.source.canal.core.DataHandlerInterface;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -46,10 +46,11 @@ import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-abstract class AbstractDataHandler extends AbstractCommonDataHandler implements DataHandlerInterface {
+abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
+    DataHandlerInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
-    private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
 
     private final CanalConf canalConf;
     private final List<String> attrList;
@@ -127,7 +128,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements 
             String timeFieldValue;
             if (eventType == CanalEntry.EventType.DELETE) {
                 // 删除数据，通过 binlog 执行时间进行统计
-                timeFieldValue = DATE_FORMAT.format(new Date(entryHeader.getExecuteTime()));
+                timeFieldValue = dateFormat.format(new Date(entryHeader.getExecuteTime()));
             } else {
                 timeFieldValue = eventData.get(timeFieldName);
             }
