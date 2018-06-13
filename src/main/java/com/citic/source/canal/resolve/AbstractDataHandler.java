@@ -1,4 +1,4 @@
-package com.citic.source.canal;
+package com.citic.source.canal.resolve;
 
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER;
 import static com.citic.sink.canal.KafkaSinkConstants.KEY_HEADER;
@@ -8,7 +8,6 @@ import static com.citic.source.canal.CanalSourceConstants.GSON;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_DB;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_FROM;
-import static com.citic.source.canal.CanalSourceConstants.META_FIELD_SQL;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TABLE;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TS;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TYPE;
@@ -19,6 +18,9 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.AgentCounter;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
+import com.citic.source.canal.core.AbstractCommonDataHandler;
+import com.citic.source.canal.CanalConf;
+import com.citic.source.canal.core.DataHandlerInterface;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -30,7 +32,6 @@ import com.google.common.collect.Table;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.nio.charset.Charset;
-import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -45,7 +46,7 @@ import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-abstract class AbstractDataHandler implements DataHandlerInterface {
+abstract class AbstractDataHandler extends AbstractCommonDataHandler implements DataHandlerInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
@@ -58,10 +59,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
 
         attrList = Lists.newArrayList(META_FIELD_DB, META_FIELD_TABLE, META_FIELD_AGENT,
             META_FIELD_FROM, META_FIELD_TS, META_FIELD_TYPE);
-
-        if (canalConf.isWriteSqlToData()) {
-            attrList.add(META_FIELD_SQL);
-        }
     }
 
     /*
@@ -98,8 +95,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
      * */
     public Event getDataEvent(CanalEntry.RowData rowData,
         CanalEntry.Header entryHeader,
-        CanalEntry.EventType eventType,
-        String sql) {
+        CanalEntry.EventType eventType) {
         String keyName = getTableKeyName(entryHeader);
         String topic = canalConf.getTableTopic(keyName);
 
@@ -108,7 +104,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         }
 
         // 处理行数据
-        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType, sql);
+        Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
         if (!canalConf.isShutdownFlowCounter()) {
@@ -170,8 +166,7 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
      * */
     private Map<String, String> handleRowData(CanalEntry.RowData rowData,
         CanalEntry.Header entryHeader,
-        CanalEntry.EventType eventType,
-        String sql) {
+        CanalEntry.EventType eventType) {
         Map<String, String> eventMap = Maps.newHashMap();
         Map<String, String> rowDataMap;
 
@@ -182,9 +177,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
             rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
         }
 
-        if (canalConf.isWriteSqlToData()) {
-            eventMap.put(META_FIELD_SQL, sql == null ? "cannot get sql" : sql);
-        }
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
         eventMap.put(META_FIELD_TS, DECIMAL_FORMAT_3.format(System.currentTimeMillis() / 1000.0));
         eventMap.put(META_FIELD_DB, entryHeader.getSchemaName());
@@ -196,49 +188,6 @@ abstract class AbstractDataHandler implements DataHandlerInterface {
         return eventMap;
     }
 
-    /*
-     * 对列数据进行解析
-     * */
-    private Map<String, String> convertColumnListToMap(List<CanalEntry.Column> columns,
-        CanalEntry.Header entryHeader) {
-        Map<String, String> rowMap = Maps.newHashMap();
-
-        for (CanalEntry.Column column : columns) {
-            int sqlType = column.getSqlType();
-            String stringValue = column.getValue();
-            String colValue;
-
-            try {
-                switch (sqlType) {
-                    /*
-                     * date 2018-04-02
-                     * time 02:34:51
-                     * datetime 2018-04-02 11:43:16
-                     * timestamp 2018-04-02 11:45:02
-                     * mysql 默认格式如上，现在不做处理后续根据需要再更改
-                     * mysql datetime maps to a java.sql.Timestamp
-                     * */
-                    case Types.DATE:
-                    case Types.TIME:
-                    case Types.TIMESTAMP: {
-                        colValue = stringValue;
-                        break;
-                    }
-                    default: {
-                        colValue = stringValue;
-                        break;
-                    }
-                }
-            } catch (NumberFormatException numberFormatException) {
-                colValue = null;
-            } catch (Exception exception) {
-                LOGGER.warn("convert row data exception", exception);
-                colValue = null;
-            }
-            rowMap.put(column.getName(), colValue);
-        }
-        return rowMap;
-    }
 
     static class Avro extends AbstractDataHandler {
 

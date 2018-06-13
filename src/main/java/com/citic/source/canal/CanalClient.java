@@ -27,14 +27,14 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CanalClient {
+public class CanalClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalClient.class);
     private final CanalConf canalConf;
 
     private CanalConnector canalConnector;
 
-    CanalClient(CanalConf canalConf) throws IllegalArgumentException {
+    public CanalClient(CanalConf canalConf) throws IllegalArgumentException {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
             this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),
@@ -56,13 +56,13 @@ class CanalClient {
         }
     }
 
-    void start() {
+    public void start() {
         this.canalConnector.connect();
         String filterTables = Joiner.on(",").join(canalConf.getFilterTableList());
         this.canalConnector.subscribe(filterTables);
     }
 
-    Message fetchRows(int batchSize) {
+    public Message fetchRows(int batchSize) {
         Message message = this.canalConnector.getWithoutAck(batchSize);
 
         long batchId = message.getId();
@@ -75,15 +75,15 @@ class CanalClient {
         }
     }
 
-    void ack(long batchId) {
+    public void ack(long batchId) {
         this.canalConnector.ack(batchId);
     }
 
-    void rollback(long batchId) {
+    public void rollback(long batchId) {
         this.canalConnector.rollback(batchId);
     }
 
-    void stop() {
+    public void stop() {
         this.canalConnector.disconnect();
     }
 

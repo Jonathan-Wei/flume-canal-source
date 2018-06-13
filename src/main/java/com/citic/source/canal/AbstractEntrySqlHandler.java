@@ -12,7 +12,7 @@ import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TS;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.SchemaCache;
-import com.citic.helper.Utility;
+import com.citic.source.canal.core.EntrySqlHandlerInterface;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,7 +31,7 @@ import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 
 
-abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
+public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
 
     private static final List<String> ATTR_LIST = Lists
         .newArrayList(META_FIELD_TABLE, META_FIELD_TS,
@@ -69,11 +69,11 @@ abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
         return eventMap;
     }
 
-    static class Avro extends AbstractEntrySqlHandler {
+    public static class Avro extends AbstractEntrySqlHandler {
 
         private static final String AVRO_SQL_TOPIC = "avro_ddl_sql";
 
-        Avro() {
+        public Avro() {
             super(AVRO_SQL_TOPIC);
         }
 
@@ -97,14 +97,14 @@ abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterface {
         }
     }
 
-    static class Json extends AbstractEntrySqlHandler {
+    public static class Json extends AbstractEntrySqlHandler {
 
         private static final Gson GSON = new Gson();
         private static final String AVRO_SQL_TOPIC = "json_ddl_sql";
         private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {
         }.getType();
 
-        Json() {
+        public Json() {
             super(AVRO_SQL_TOPIC);
         }
 

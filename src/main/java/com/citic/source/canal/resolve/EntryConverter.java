@@ -1,8 +1,13 @@
 
-package com.citic.source.canal;
+package com.citic.source.canal.resolve;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
-import com.google.protobuf.InvalidProtocolBufferException;
+import com.citic.source.canal.AbstractEntrySqlHandler.Avro;
+import com.citic.source.canal.AbstractEntrySqlHandler.Json;
+import com.citic.source.canal.CanalConf;
+import com.citic.source.canal.core.DataHandlerInterface;
+import com.citic.source.canal.core.EntryConverterInterface;
+import com.citic.source.canal.core.EntrySqlHandlerInterface;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.flume.Event;
@@ -10,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-class EntryConverter {
+public class EntryConverter implements EntryConverterInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
 
@@ -19,37 +24,19 @@ class EntryConverter {
 
     private String normalSql;
 
-    EntryConverter(boolean useAvro, CanalConf canalConf) {
+    public EntryConverter(boolean useAvro, CanalConf canalConf) {
         if (useAvro) {
-            this.sqlHandler = new AbstractEntrySqlHandler.Avro();
+            this.sqlHandler = new Avro();
             this.dataHandler = new AbstractDataHandler.Avro(canalConf);
         } else {
-            this.sqlHandler = new AbstractEntrySqlHandler.Json();
+            this.sqlHandler = new Json();
             this.dataHandler = new AbstractDataHandler.Json(canalConf);
         }
 
     }
 
-    List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
+    public List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
         List<Event> events = new ArrayList<>();
-        /*
-         * TODO: 事务相关,暂不做处理
-         * */
-        if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND
-            || entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
-
-            if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
-                CanalEntry.TransactionEnd end = null;
-                try {
-                    end = CanalEntry.TransactionEnd.parseFrom(entry.getStoreValue());
-                } catch (InvalidProtocolBufferException e) {
-                    LOGGER.warn(
-                        "parse transaction end event has an error , data:" + entry.toString());
-                    throw new RuntimeException(
-                        "parse event has an error , data:" + entry.toString(), e);
-                }
-            }
-        }
 
         if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
             CanalEntry.RowChange rowChange;
@@ -72,7 +59,7 @@ class EntryConverter {
             } else {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
                     Event dataEvent = this.dataHandler
-                        .getDataEvent(rowData, eventHeader, eventType, normalSql);
+                        .getDataEvent(rowData, eventHeader, eventType);
 
                     if (dataEvent != null) {
                         events.add(dataEvent);

@@ -1,11 +1,10 @@
-package com.citic.source.canal;
+package com.citic.source.canal.core;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import org.apache.flume.Event;
 
-interface DataHandlerInterface {
+public interface DataHandlerInterface {
     Event getDataEvent(CanalEntry.RowData rowData,
         CanalEntry.Header entryHeader,
-        CanalEntry.EventType eventType,
-        String sql);
+        CanalEntry.EventType eventType);
 }

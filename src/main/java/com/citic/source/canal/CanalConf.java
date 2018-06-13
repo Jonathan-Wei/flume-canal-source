@@ -16,7 +16,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CanalConf {
+public class CanalConf {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
     private String agentIpAddress;
@@ -30,7 +30,6 @@ class CanalConf {
     private String fromDbIp;
 
     private boolean shutdownFlowCounter;
-    private boolean writeSqlToData;
 
     private String tableToTopicMap;
     private String tableFieldsFilter;
@@ -74,24 +73,24 @@ class CanalConf {
         }
     }
 
-    String getTableFieldsFilter() {
+    public String getTableFieldsFilter() {
         return this.tableFieldsFilter;
     }
 
-    void setTableFieldsFilter(String tableFieldsFilter) {
+    public void setTableFieldsFilter(String tableFieldsFilter) {
         this.tableFieldsFilter = tableFieldsFilter;
     }
 
-    String getTableToTopicMap() {
+    public String getTableToTopicMap() {
         return this.tableToTopicMap;
     }
 
-    void setTableToTopicMap(String tableToTopicMap) {
+    public void setTableToTopicMap(String tableToTopicMap) {
         this.tableToTopicMap = tableToTopicMap;
         splitTableToTopicMap(tableToTopicMap);
     }
 
-    String getFromDbIp() {
+    public String getFromDbIp() {
         return this.fromDbIp;
     }
 
@@ -123,7 +122,7 @@ class CanalConf {
     /*
      * 根据表名获取 topic
      * */
-    String getTableTopic(String schemaTableName) {
+    public String getTableTopic(String schemaTableName) {
         if (this.tableToTopicRegexMap != null) {
             return this.tableToTopicRegexMap
                 .getOrDefault(schemaTableName, CanalSourceConstants.DEFAULT_NOT_MAP_TOPIC);
@@ -132,40 +131,32 @@ class CanalConf {
         }
     }
 
-    boolean isWriteSqlToData() {
-        return writeSqlToData;
-    }
-
-    void setWriteSqlToData(boolean writeSqlToData) {
-        this.writeSqlToData = writeSqlToData;
-    }
-
-    boolean isShutdownFlowCounter() {
+    public boolean isShutdownFlowCounter() {
         return shutdownFlowCounter;
     }
 
-    void setShutdownFlowCounter(boolean shutdownFlowCounter) {
+    public void setShutdownFlowCounter(boolean shutdownFlowCounter) {
         this.shutdownFlowCounter = shutdownFlowCounter;
     }
 
-    String getAgentIpAddress() {
+    public String getAgentIpAddress() {
         return agentIpAddress;
     }
 
-    String getZkServers() {
+    public String getZkServers() {
         return zkServers;
     }
 
-    void setZkServers(String zkServers) {
+    public void setZkServers(String zkServers) {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(zkServers), "zkServers cannot empty");
         this.zkServers = zkServers;
     }
 
-    String getDestination() {
+    public String getDestination() {
         return destination;
     }
 
-    void setDestination(String destination) {
+    public void setDestination(String destination) {
         Preconditions
             .checkArgument(!Strings.isNullOrEmpty(destination), "destination cannot empty");
         this.destination = destination;
@@ -173,35 +164,35 @@ class CanalConf {
         this.fromDbIp = this.destination.replace("-", ":").replace("_", ".");
     }
 
-    String getUsername() {
+    public String getUsername() {
         return username;
     }
 
-    void setUsername(String username) {
+    public void setUsername(String username) {
         this.username = username;
     }
 
-    String getPassword() {
+    public String getPassword() {
         return password;
     }
 
-    void setPassword(String password) {
+    public void setPassword(String password) {
         this.password = password;
     }
 
-    int getBatchSize() {
+    public int getBatchSize() {
         return batchSize;
     }
 
-    void setBatchSize(int batchSize) {
+    public void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
     }
 
-    String getServerUrl() {
+    public String getServerUrl() {
         return serverUrl;
     }
 
-    void setServerUrl(String serverUrl) {
+    public void setServerUrl(String serverUrl) {
         this.serverUrl = serverUrl;
     }
 
@@ -209,22 +200,22 @@ class CanalConf {
         return serverUrls;
     }
 
-    void setServerUrls(String serverUrls) {
+    public void setServerUrls(String serverUrls) {
         this.serverUrls = serverUrls;
     }
 
-    void setIpInterface(String ipInterface) {
+    public void setIpInterface(String ipInterface) {
         agentIpAddress = Utility.getLocalIp(ipInterface);
     }
 
     /*
      * 获取需要过滤的表列表
      * */
-    List<String> getFilterTableList() {
+    public List<String> getFilterTableList() {
         return filterTableList;
     }
 
-    boolean isConnectionUrlValid() {
+    public boolean isConnectionUrlValid() {
         return !(Strings.isNullOrEmpty(this.zkServers)
             && Strings.isNullOrEmpty(this.serverUrl)
             && Strings.isNullOrEmpty(this.serverUrls));
