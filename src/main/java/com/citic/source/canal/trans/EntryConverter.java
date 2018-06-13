@@ -171,10 +171,26 @@ public class EntryConverter implements EntryConverterInterface {
 
             transId = begin.getTransactionId();
             this.transDataList.clear();
+            LOGGER.debug("TRANSACTIONBEGIN transId:{}", transId);
 
         } else if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
-            Event transEvent = transDataToEvent();
-            events.add(transEvent);
+            CanalEntry.TransactionEnd end = null;
+            try {
+                end = CanalEntry.TransactionEnd
+                    .parseFrom(entry.getStoreValue());
+            } catch (InvalidProtocolBufferException e) {
+                LOGGER.error(
+                    "parse transaction end event has an error , data:" + entry.toString());
+                throw new RuntimeException(
+                    "parse event has an error , data:" + entry.toString(), e);
+            }
+
+            if (this.transDataList.size() > 0) {
+                Event transEvent = transDataToEvent();
+                events.add(transEvent);
+                this.transDataList.clear();
+            }
+            LOGGER.debug("TRANSACTIONEND transId:{}", end.getTransactionId());
         } else if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
             CanalEntry.RowChange rowChange;
             try {
