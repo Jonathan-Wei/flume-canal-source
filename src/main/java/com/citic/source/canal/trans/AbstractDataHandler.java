@@ -2,29 +2,25 @@ package com.citic.source.canal.trans;
 
 import static com.citic.source.canal.CanalSourceConstants.DECIMAL_FORMAT_3;
 import static com.citic.source.canal.CanalSourceConstants.GSON;
-import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_DB;
-import static com.citic.source.canal.CanalSourceConstants.META_FIELD_FROM;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TABLE;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TS;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_TYPE;
 import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
-import com.citic.source.canal.core.AbstractCommonDataHandler;
 import com.citic.source.canal.CanalConf;
+import com.citic.source.canal.core.AbstractCommonDataHandler;
 import com.citic.source.canal.core.TransDataHandlerInterface;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AbstractDataHandler extends AbstractCommonDataHandler implements TransDataHandlerInterface {
+public class AbstractDataHandler extends AbstractCommonDataHandler implements
+    TransDataHandlerInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
-
     private final CanalConf canalConf;
 
     public AbstractDataHandler(CanalConf canalConf) {
@@ -57,7 +53,7 @@ public class AbstractDataHandler extends AbstractCommonDataHandler implements Tr
     }
 
     @Override
-    public  String getDataJsonString (CanalEntry.RowData rowData,
+    public String getDataJsonString(CanalEntry.RowData rowData,
         CanalEntry.Header entryHeader,
         CanalEntry.EventType eventType) {
 

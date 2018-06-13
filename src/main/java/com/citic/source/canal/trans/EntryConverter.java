@@ -22,9 +22,11 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,7 @@ import org.slf4j.LoggerFactory;
 public class EntryConverter implements EntryConverterInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
+    private static final Type LIST_TOKEN_TYPE = new TypeToken<List<String>>() {}.getType();
 
     private final EntrySqlHandlerInterface sqlHandler;
     private final TransDataHandlerInterface dataHandler;
@@ -137,7 +140,7 @@ public class EntryConverter implements EntryConverterInterface {
     }
 
     private Event transDataToEvent() {
-        String transListData = GSON.toJson(this.transDataList, TOKEN_TYPE);
+        String transListData = GSON.toJson(this.transDataList, LIST_TOKEN_TYPE);
 
         // 处理行数据
         Map<String, String> eventData = handleRowData(transListData);
