@@ -132,10 +132,6 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
             handleCanalEntry(entry, canalConf, eventsAll, entryConverter);
         }
 
-        if (eventsAll.size() == 0) {
-            return Status.READY;
-        }
-
         sourceCounter.addToEventReceivedCount(eventsAll.size());
         sourceCounter.incrementAppendBatchReceivedCount();
 
