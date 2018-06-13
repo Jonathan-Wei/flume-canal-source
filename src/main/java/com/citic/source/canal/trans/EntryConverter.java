@@ -8,7 +8,6 @@ import static com.citic.source.canal.CanalSourceConstants.META_DATA;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_FROM;
 import static com.citic.source.canal.CanalSourceConstants.META_TRANS_ID;
-import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.SchemaCache;
@@ -42,7 +41,8 @@ import org.slf4j.LoggerFactory;
 public class EntryConverter implements EntryConverterInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
-    private static final Type LIST_TOKEN_TYPE = new TypeToken<List<String>>() {}.getType();
+    private static final Type LIST_TOKEN_TYPE = new TypeToken<List<String>>() {
+    }.getType();
 
     private final EntrySqlHandlerInterface sqlHandler;
     private final TransDataHandlerInterface dataHandler;
@@ -81,7 +81,7 @@ public class EntryConverter implements EntryConverterInterface {
     /*
      * 处理行数据，并添加其他字段信息
      * */
-    private Map<String, String> handleRowData(String transListData) {
+    private Map<String, String> handleRowData(String transListData, String transId) {
         Map<String, String> eventMap = Maps.newHashMap();
 
         eventMap.put(META_DATA, transListData);
@@ -143,7 +143,7 @@ public class EntryConverter implements EntryConverterInterface {
         String transListData = GSON.toJson(this.transDataList, LIST_TOKEN_TYPE);
 
         // 处理行数据
-        Map<String, String> eventData = handleRowData(transListData);
+        Map<String, String> eventData = handleRowData(transListData, this.transId);
 
         // 全局事务封装只能配置全库全表
         String allTables = canalConf.getFilterTableList().get(0);
@@ -157,24 +157,9 @@ public class EntryConverter implements EntryConverterInterface {
     @Override
     public List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
         List<Event> events = new ArrayList<>();
-        if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONBEGIN) {
-            CanalEntry.TransactionBegin begin = null;
-            try {
-                begin = CanalEntry.TransactionBegin
-                    .parseFrom(entry.getStoreValue());
-            } catch (InvalidProtocolBufferException e) {
-                LOGGER.error(
-                    "parse transaction begin event has an error , data:" + entry.toString());
-                throw new RuntimeException(
-                    "parse event has an error , data:" + entry.toString(), e);
-            }
-
-            transId = begin.getTransactionId();
-            this.transDataList.clear();
-            LOGGER.debug("TRANSACTIONBEGIN transId:{}", transId);
-
-        } else if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
-            CanalEntry.TransactionEnd end = null;
+        // 经过测试发现，EntryType.TRANSACTIONBEGIN 不会产生
+        if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
+            CanalEntry.TransactionEnd end;
             try {
                 end = CanalEntry.TransactionEnd
                     .parseFrom(entry.getStoreValue());
@@ -184,6 +169,8 @@ public class EntryConverter implements EntryConverterInterface {
                 throw new RuntimeException(
                     "parse event has an error , data:" + entry.toString(), e);
             }
+
+            this.transId = end.getTransactionId();
 
             if (this.transDataList.size() > 0) {
                 Event transEvent = transDataToEvent();
