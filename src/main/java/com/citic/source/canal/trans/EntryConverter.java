@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 public class EntryConverter implements EntryConverterInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
-    private static final Type LIST_TOKEN_TYPE = new TypeToken<List<String>>() {
+    private static final Type LIST_TOKEN_TYPE = new TypeToken<List<Map<String, String>>>() {
     }.getType();
     private static final String NOT_SET_FIELD = "__notSet";
 
@@ -110,7 +110,13 @@ public class EntryConverter implements EntryConverterInterface {
     private Map<String, Object> handleRowData(List<Map<String, String>> transDataList, String transId) {
         Map<String, Object> eventMap = Maps.newHashMap();
 
-        eventMap.put(META_DATA, transDataList);
+        if (this.userAvro) {
+            String transDataListString = GSON.toJson(transDataList, LIST_TOKEN_TYPE);
+            eventMap.put(META_DATA, transDataListString);
+        } else {
+            eventMap.put(META_DATA, transDataList);
+        }
+
         eventMap.put(META_TRANS_ID, transId == null ? "" : transId);
         eventMap.put(META_FIELD_AGENT, canalConf.getAgentIpAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDbIp());
