@@ -214,7 +214,7 @@ public class EntryConverter implements EntryConverterInterface {
         // 处理行数据
         Map<String, Object> eventData = handleRowData(this.transDataList, this.transId);
 
-        // 全局事务封装只能配置全库全表
+        // 全局事务封装只能配置全库全表, 获取第一个 topic
         String allTables = canalConf.getFilterTableList().get(0);
         String topic = canalConf.getTableTopic(allTables);
 

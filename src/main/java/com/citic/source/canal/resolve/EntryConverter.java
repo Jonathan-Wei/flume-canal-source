@@ -39,7 +39,6 @@ public class EntryConverter implements EntryConverterInterface {
             this.sqlHandler = new Json();
             this.dataHandler = new AbstractDataHandler.Json(canalConf);
         }
-
     }
 
     /**
