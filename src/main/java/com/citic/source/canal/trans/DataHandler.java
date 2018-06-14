@@ -19,16 +19,16 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AbstractDataHandler extends AbstractCommonDataHandler implements
+public class DataHandler extends AbstractCommonDataHandler implements
     TransDataHandlerInterface {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataHandler.class);
     private final CanalConf canalConf;
 
     private final BiFunction<String, String, Boolean> removeColumnFilterFun;
     private final Function<String, Boolean> removeRowFilterFun;
 
-    public AbstractDataHandler(CanalConf canalConf,
+    public DataHandler(CanalConf canalConf,
         Function<String, Boolean> removeRowFilterFun,
         BiFunction<String, String, Boolean> removeColumnFilterFun) {
 

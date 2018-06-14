@@ -5,15 +5,14 @@ import com.citic.source.canal.core.AbstractCanalSource;
 import com.citic.source.canal.core.EntryConverterInterface;
 import com.citic.source.canal.trans.EntryConverter;
 import java.util.List;
-import org.apache.flume.Context;
 import org.apache.flume.Event;
 
 public class TransCanalSource extends AbstractCanalSource {
 
     @Override
-    protected EntryConverterInterface newEntryConverterInstance(Context context,
+    protected EntryConverterInterface newEntryConverterInstance(boolean useAvro,
         CanalConf canalConf) {
-        return new EntryConverter(canalConf);
+        return new EntryConverter(useAvro, canalConf);
     }
 
     @Override

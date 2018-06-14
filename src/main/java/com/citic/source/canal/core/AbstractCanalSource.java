@@ -16,6 +16,7 @@ import static com.citic.source.canal.CanalSourceConstants.SHUTDOWN_FLOW_COUNTER;
 import static com.citic.source.canal.CanalSourceConstants.TABLE_FIELDS_FILTER;
 import static com.citic.source.canal.CanalSourceConstants.TABLE_TO_TOPIC_MAP;
 import static com.citic.source.canal.CanalSourceConstants.USERNAME;
+import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
 import static com.citic.source.canal.CanalSourceConstants.ZOOKEEPER_SERVERS;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
@@ -91,7 +92,8 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
             sourceCounter = new org.apache.flume.instrumentation.SourceCounter(getName());
         }
 
-        entryConverter = newEntryConverterInstance(context, canalConf);
+        boolean useAvro = context.getBoolean(USE_AVRO, true);
+        entryConverter = newEntryConverterInstance(useAvro, canalConf);
     }
 
     @Override
@@ -109,7 +111,7 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
         sourceCounter.start();
     }
 
-    protected abstract EntryConverterInterface newEntryConverterInstance(Context context,
+    protected abstract EntryConverterInterface newEntryConverterInstance(boolean useAvro,
         CanalConf canalConf);
 
     protected abstract void handleCanalEntry(CanalEntry.Entry entry, CanalConf canalConf,

@@ -8,6 +8,7 @@ import static com.citic.source.canal.CanalSourceConstants.META_DATA;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_FROM;
 import static com.citic.source.canal.CanalSourceConstants.META_TRANS_ID;
+import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.SchemaCache;
@@ -27,6 +28,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ import java.util.function.Function;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.collections.ListUtils;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
@@ -55,13 +58,13 @@ public class EntryConverter implements EntryConverterInterface {
     private final TransDataHandlerInterface dataHandler;
     private final List<String> transDataList;
     private final CanalConf canalConf;
+    private final boolean userAvro;
 
     // topic -> schema
     private final Map<String, String> topicToSchemaMap = Maps.newHashMap();
     private final RegexHashBasedTable<String, Boolean> removeFilterTable = RegexHashBasedTable
         .create();
     private String transId = null;
-    private String normalSql;
 
     private final List<String> attrList;
 
@@ -70,8 +73,9 @@ public class EntryConverter implements EntryConverterInterface {
      *
      * @param canalConf the canal conf
      */
-    public EntryConverter(CanalConf canalConf) {
+    public EntryConverter(boolean useAvro, CanalConf canalConf) {
         this.canalConf = canalConf;
+        this.userAvro = useAvro;
         this.sqlHandler = new Avro();
         this.transDataList = Lists.newArrayList();
 
@@ -85,7 +89,7 @@ public class EntryConverter implements EntryConverterInterface {
         Function<String, Boolean> removeRowFilterFunc = (tableKey) ->
             removeFilterTable.contains(tableKey, NOT_SET_FIELD);
 
-        this.dataHandler = new AbstractDataHandler(canalConf, removeRowFilterFunc,
+        this.dataHandler = new DataHandler(canalConf, removeRowFilterFunc,
             removeColumnFilterFun);
     }
 
@@ -189,6 +193,15 @@ public class EntryConverter implements EntryConverterInterface {
         return EventBuilder.withBody(eventBody, eventHeader);
     }
 
+    private Event jsonDataToEvent(Map<String, String> eventData,
+        Map<String, String> eventHeader) {
+        byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
+        LOGGER.debug("event data: {}", eventData);
+        LOGGER.debug("event header: {}", eventHeader);
+        return EventBuilder.withBody(eventBody, eventHeader);
+    }
+
+
     private Event transDataToEvent() {
         String transListData = GSON.toJson(this.transDataList, LIST_TOKEN_TYPE);
 
@@ -201,7 +214,11 @@ public class EntryConverter implements EntryConverterInterface {
 
         Map<String, String> header = handleRowDataHeader(topic);
 
-        return dataToEvent(eventData, header, topic);
+        if (this.userAvro) {
+            return dataToEvent(eventData, header, topic);
+        } else {
+            return jsonDataToEvent(eventData, header);
+        }
     }
 
     @Override
@@ -242,7 +259,7 @@ public class EntryConverter implements EntryConverterInterface {
 
             // canal 在 QUERY 事件没有做表过滤
             if (eventType == CanalEntry.EventType.QUERY) {
-                normalSql = rowChange.getSql();
+                // do nothing
             } else if (rowChange.getIsDdl()) {
                 // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
                 events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));

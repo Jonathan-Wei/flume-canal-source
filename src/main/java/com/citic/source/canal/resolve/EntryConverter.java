@@ -25,8 +25,6 @@ public class EntryConverter implements EntryConverterInterface {
     private final EntrySqlHandlerInterface sqlHandler;
     private final DataHandlerInterface dataHandler;
 
-    private String normalSql;
-
     /**
      * Instantiates a new Entry converter.
      *
@@ -67,7 +65,7 @@ public class EntryConverter implements EntryConverterInterface {
 
             // canal 在 QUERY 事件没有做表过滤
             if (eventType == CanalEntry.EventType.QUERY) {
-                normalSql = rowChange.getSql();
+                // do nothing
             } else if (rowChange.getIsDdl()) {
                 // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
                 events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
