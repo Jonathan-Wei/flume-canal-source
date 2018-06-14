@@ -82,7 +82,10 @@ public class EntryConverter implements EntryConverterInterface {
         this.attrList = Lists
             .newArrayList(META_DATA, META_TRANS_ID, META_FIELD_AGENT, META_FIELD_FROM);
 
-        splitTableToTopicMap(canalConf.getTableToTopicMap());
+        if (this.userAvro) {
+            // only avro need schema name;
+            splitTableToTopicMap(canalConf.getTableToTopicMap());
+        }
         splitRemoveFilter(canalConf.getRemoveFilter());
 
         BiFunction<String, String, Boolean> removeColumnFilterFun = removeFilterTable::contains;

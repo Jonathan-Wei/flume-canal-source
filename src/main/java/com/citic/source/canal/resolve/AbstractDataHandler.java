@@ -400,6 +400,9 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
                 .split(tableToTopicMap)
                 .forEach(item -> {
                     String[] result = item.split(":");
+                    Preconditions.checkArgument(result.length == 2,
+                        "tableToTopicMap format incorrect eg: db.tbl1:topic1");
+
                     topicAppendList.add(result[1].trim());
                 });
         }
