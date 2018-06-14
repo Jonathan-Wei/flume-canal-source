@@ -173,9 +173,9 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
 
         if (eventType == CanalEntry.EventType.DELETE) {
             // 删除事件 getAfterColumnsList 数据为空
-            rowDataMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader);
+            rowDataMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader, null);
         } else {
-            rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
+            rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader, null);
         }
 
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());

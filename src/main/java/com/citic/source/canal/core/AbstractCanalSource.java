@@ -9,6 +9,7 @@ import static com.citic.source.canal.CanalSourceConstants.DESTINATION;
 import static com.citic.source.canal.CanalSourceConstants.IP_INTERFACE;
 import static com.citic.source.canal.CanalSourceConstants.MIN_BATCH_SIZE;
 import static com.citic.source.canal.CanalSourceConstants.PSWD;
+import static com.citic.source.canal.CanalSourceConstants.REMOVE_FILTER;
 import static com.citic.source.canal.CanalSourceConstants.SERVER_URL;
 import static com.citic.source.canal.CanalSourceConstants.SERVER_URLS;
 import static com.citic.source.canal.CanalSourceConstants.SHUTDOWN_FLOW_COUNTER;
@@ -58,6 +59,8 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
         canalConf.setBatchSize(context.getInteger(BATCH_SIZE, DEFAULT_BATCH_SIZE));
         canalConf.setTableToTopicMap(context.getString(TABLE_TO_TOPIC_MAP));
         canalConf.setTableFieldsFilter(context.getString(TABLE_FIELDS_FILTER));
+        // trans only
+        canalConf.setRemoveFilter(context.getString(REMOVE_FILTER));
 
         canalConf.setShutdownFlowCounter(
             context.getBoolean(SHUTDOWN_FLOW_COUNTER, DEFAULT_SHUTDOWN_FLOW_COUNTER));

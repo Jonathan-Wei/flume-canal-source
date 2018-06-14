@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,13 +17,23 @@ public abstract class AbstractCommonDataHandler {
      * 对列数据进行解析
      * */
     protected Map<String, String> convertColumnListToMap(List<Column> columns,
-        CanalEntry.Header entryHeader) {
+        CanalEntry.Header entryHeader, BiFunction<String, String, Boolean> removeFilterFun) {
         Map<String, String> rowMap = Maps.newHashMap();
+
+        String keyName = null;
+        if (removeFilterFun != null) {
+            keyName = entryHeader.getSchemaName() + "." + entryHeader.getTableName();
+        }
 
         for (CanalEntry.Column column : columns) {
             int sqlType = column.getSqlType();
             String stringValue = column.getValue();
             String colValue;
+            String columnName = column.getName();
+
+            if (removeFilterFun != null && removeFilterFun.apply(keyName, columnName)) {
+                continue;
+            }
 
             try {
                 switch (sqlType) {
@@ -51,7 +62,7 @@ public abstract class AbstractCommonDataHandler {
                 LOGGER.warn("convert row data exception", exception);
                 colValue = null;
             }
-            rowMap.put(column.getName(), colValue);
+            rowMap.put(columnName, colValue);
         }
         return rowMap;
     }

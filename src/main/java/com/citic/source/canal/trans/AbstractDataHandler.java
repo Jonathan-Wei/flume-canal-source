@@ -14,6 +14,8 @@ import com.citic.source.canal.core.AbstractCommonDataHandler;
 import com.citic.source.canal.core.TransDataHandlerInterface;
 import com.google.common.collect.Maps;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,8 +25,16 @@ public class AbstractDataHandler extends AbstractCommonDataHandler implements
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
     private final CanalConf canalConf;
 
-    public AbstractDataHandler(CanalConf canalConf) {
+    private final BiFunction<String, String, Boolean> removeColumnFilterFun;
+    private final Function<String, Boolean> removeRowFilterFun;
+
+    public AbstractDataHandler(CanalConf canalConf,
+        Function<String, Boolean> removeRowFilterFun,
+        BiFunction<String, String, Boolean> removeColumnFilterFun) {
+
         this.canalConf = canalConf;
+        this.removeRowFilterFun = removeRowFilterFun;
+        this.removeColumnFilterFun = removeColumnFilterFun;
     }
 
     /*
@@ -38,9 +48,11 @@ public class AbstractDataHandler extends AbstractCommonDataHandler implements
 
         if (eventType == CanalEntry.EventType.DELETE) {
             // 删除事件 getAfterColumnsList 数据为空
-            rowDataMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader);
+            rowDataMap = convertColumnListToMap(rowData.getBeforeColumnsList(), entryHeader,
+                this.removeColumnFilterFun);
         } else {
-            rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader);
+            rowDataMap = convertColumnListToMap(rowData.getAfterColumnsList(), entryHeader,
+                this.removeColumnFilterFun);
         }
 
         eventMap.put(META_FIELD_TABLE, entryHeader.getTableName());
@@ -57,11 +69,16 @@ public class AbstractDataHandler extends AbstractCommonDataHandler implements
         CanalEntry.Header entryHeader,
         CanalEntry.EventType eventType) {
 
+        String keyName = entryHeader.getSchemaName() + "." + entryHeader.getTableName();
+        // 对行数据进行过滤
+        if (this.removeRowFilterFun.apply(keyName)) {
+            return null;
+        }
+
         // 处理行数据
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
-        // TODO:对数据字段和表进行过滤
         return GSON.toJson(eventData, TOKEN_TYPE);
     }
 }

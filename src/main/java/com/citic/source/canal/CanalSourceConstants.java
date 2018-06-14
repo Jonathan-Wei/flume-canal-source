@@ -21,6 +21,9 @@ public class CanalSourceConstants {
     public static final String BATCH_SIZE = "batchSize";
     public static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
     public static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
+    public static final String REMOVE_FILTER = "removeFilter";
+
+
     public static final String USE_AVRO = "useAvro";
     public static final String SHUTDOWN_FLOW_COUNTER = "shutdownFlowCounter";
     public static final boolean DEFAULT_SHUTDOWN_FLOW_COUNTER = false;

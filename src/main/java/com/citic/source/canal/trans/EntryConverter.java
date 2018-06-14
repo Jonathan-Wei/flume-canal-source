@@ -21,6 +21,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.RegexHashBasedTable;
 import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.twitter.bijection.Injection;
@@ -29,6 +30,8 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -46,6 +49,7 @@ public class EntryConverter implements EntryConverterInterface {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryConverter.class);
     private static final Type LIST_TOKEN_TYPE = new TypeToken<List<String>>() {
     }.getType();
+    private static final String NOT_SET_FIELD = "__notSet";
 
     private final EntrySqlHandlerInterface sqlHandler;
     private final TransDataHandlerInterface dataHandler;
@@ -54,6 +58,8 @@ public class EntryConverter implements EntryConverterInterface {
 
     // topic -> schema
     private final Map<String, String> topicToSchemaMap = Maps.newHashMap();
+    private final RegexHashBasedTable<String, Boolean> removeFilterTable = RegexHashBasedTable
+        .create();
     private String transId = null;
     private String normalSql;
 
@@ -67,14 +73,20 @@ public class EntryConverter implements EntryConverterInterface {
     public EntryConverter(CanalConf canalConf) {
         this.canalConf = canalConf;
         this.sqlHandler = new Avro();
-        this.dataHandler = new AbstractDataHandler(canalConf);
         this.transDataList = Lists.newArrayList();
 
         this.attrList = Lists
             .newArrayList(META_DATA, META_TRANS_ID, META_FIELD_AGENT, META_FIELD_FROM);
 
         splitTableToTopicMap(canalConf.getTableToTopicMap());
+        splitRemoveFilter(canalConf.getRemoveFilter());
 
+        BiFunction<String, String, Boolean> removeColumnFilterFun = removeFilterTable::contains;
+        Function<String, Boolean> removeRowFilterFunc = (tableKey) ->
+            removeFilterTable.contains(tableKey, NOT_SET_FIELD);
+
+        this.dataHandler = new AbstractDataHandler(canalConf, removeRowFilterFunc,
+            removeColumnFilterFun);
     }
 
     /*
@@ -121,6 +133,36 @@ public class EntryConverter implements EntryConverterInterface {
 
                 // topic -> avro schema
                 this.topicToSchemaMap.put(result[1].trim(), result[2].trim());
+            });
+    }
+
+    /*
+     * 对库，表和字段排除进行解析
+     * */
+    private void splitRemoveFilter(String removeFilter) {
+        if (Strings.isNullOrEmpty(removeFilter)) {
+            return;
+        }
+
+        // test\\..*;test1.test2;test1.test3:id,name
+        Splitter.on(';')
+            .omitEmptyStrings()
+            .trimResults()
+            .split(removeFilter)
+            .forEach(item -> {
+                if (item.contains(":")) { // 字段过滤
+                    String[] result = item.split(":");
+                    Preconditions.checkArgument(result.length == 2,
+                        "removeFilter format incorrect eg: db.tbl1:id,name");
+                    String table = result[0].trim();
+                    String fields = result[1].trim();
+
+                    for (String field : fields.split(",")) {
+                        removeFilterTable.put(table, field.trim(), true);
+                    }
+                } else { // 库，表过滤
+                    removeFilterTable.put(item, NOT_SET_FIELD, true);
+                }
             });
     }
 
