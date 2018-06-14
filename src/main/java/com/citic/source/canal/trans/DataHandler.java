@@ -65,7 +65,7 @@ public class DataHandler extends AbstractCommonDataHandler implements
     }
 
     @Override
-    public String getDataJsonString(CanalEntry.RowData rowData,
+    public Map<String, String> getDataMap(CanalEntry.RowData rowData,
         CanalEntry.Header entryHeader,
         CanalEntry.EventType eventType) {
 
@@ -79,6 +79,6 @@ public class DataHandler extends AbstractCommonDataHandler implements
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
-        return GSON.toJson(eventData, TOKEN_TYPE);
+        return eventData;
     }
 }

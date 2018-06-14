@@ -37,7 +37,6 @@ import java.util.function.Function;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.commons.collections.ListUtils;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
@@ -56,7 +55,7 @@ public class EntryConverter implements EntryConverterInterface {
 
     private final EntrySqlHandlerInterface sqlHandler;
     private final TransDataHandlerInterface dataHandler;
-    private final List<String> transDataList;
+    private final List<Map<String, String>> transDataList;
     private final CanalConf canalConf;
     private final boolean userAvro;
 
@@ -108,10 +107,10 @@ public class EntryConverter implements EntryConverterInterface {
     /*
      * 处理行数据，并添加其他字段信息
      * */
-    private Map<String, String> handleRowData(String transListData, String transId) {
-        Map<String, String> eventMap = Maps.newHashMap();
+    private Map<String, Object> handleRowData(List<Map<String, String>> transDataList, String transId) {
+        Map<String, Object> eventMap = Maps.newHashMap();
 
-        eventMap.put(META_DATA, transListData);
+        eventMap.put(META_DATA, transDataList);
         eventMap.put(META_TRANS_ID, transId == null ? "" : transId);
         eventMap.put(META_FIELD_AGENT, canalConf.getAgentIpAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDbIp());
@@ -173,7 +172,7 @@ public class EntryConverter implements EntryConverterInterface {
             });
     }
 
-    private Event dataToEvent(Map<String, String> eventData,
+    private Event dataToEvent(Map<String, Object> eventData,
         Map<String, String> eventHeader,
         String topic) {
 
@@ -196,7 +195,7 @@ public class EntryConverter implements EntryConverterInterface {
         return EventBuilder.withBody(eventBody, eventHeader);
     }
 
-    private Event jsonDataToEvent(Map<String, String> eventData,
+    private Event jsonDataToEvent(Map<String, Object> eventData,
         Map<String, String> eventHeader) {
         byte[] eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
         LOGGER.debug("event data: {}", eventData);
@@ -206,10 +205,8 @@ public class EntryConverter implements EntryConverterInterface {
 
 
     private Event transDataToEvent() {
-        String transListData = GSON.toJson(this.transDataList, LIST_TOKEN_TYPE);
-
         // 处理行数据
-        Map<String, String> eventData = handleRowData(transListData, this.transId);
+        Map<String, Object> eventData = handleRowData(this.transDataList, this.transId);
 
         // 全局事务封装只能配置全库全表
         String allTables = canalConf.getFilterTableList().get(0);
@@ -268,10 +265,10 @@ public class EntryConverter implements EntryConverterInterface {
                 events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
             } else {
                 for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
-                    String dataJsonString = this.dataHandler
-                        .getDataJsonString(rowData, eventHeader, eventType);
-                    if (dataJsonString != null) {
-                        transDataList.add(dataJsonString);
+                    Map<String, String> dataMap = this.dataHandler
+                        .getDataMap(rowData, eventHeader, eventType);
+                    if (dataMap != null) {
+                        transDataList.add(dataMap);
                     }
                 }
             }
