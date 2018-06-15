@@ -229,7 +229,7 @@ public class EntryConverter implements EntryConverterInterface {
         Map<String, String> header = handleRowDataHeader(topic);
 
         if (!canalConf.isShutdownFlowCounter()) {
-            doDataCount(topic, tansEndHeader);
+            doDataCount(topic, allTables, tansEndHeader);
         }
 
         if (this.userAvro) {
@@ -239,10 +239,10 @@ public class EntryConverter implements EntryConverterInterface {
         }
     }
 
-    private void doDataCount(String topic, CanalEntry.Header entryHeader) {
+    private void doDataCount(String topic, String tableKey, CanalEntry.Header entryHeader) {
         String timeFieldValue = dateFormat.format(new Date(entryHeader.getExecuteTime()));
         // 事务封装不能确定单个表，因此传入空值
-        FlowCounter.increment(topic, "", canalConf.getFromDbIp(), timeFieldValue);
+        FlowCounter.increment(topic, tableKey, canalConf.getFromDbIp(), timeFieldValue);
         AgentCounter.increment(canalConf.getAgentIpAddress());
     }
 
