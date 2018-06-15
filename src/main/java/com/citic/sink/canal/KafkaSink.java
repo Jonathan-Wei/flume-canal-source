@@ -104,7 +104,7 @@ import org.slf4j.LoggerFactory;
 @javax.annotation.concurrent.NotThreadSafe
 public class KafkaSink extends AbstractSink implements Configurable {
 
-    private static final Logger logger = LoggerFactory.getLogger(KafkaSink.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaSink.class);
 
     private final Properties kafkaProps = new Properties();
     private KafkaProducer<Object, Object> producer;
@@ -169,7 +169,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     eventTopic = headers.get(topicHeader);
                     if (eventTopic == null) {
                         eventTopic = BucketPath.escapeString(topic, event.getHeaders());
-                        logger.debug("{} was set to true but header {} was null. Producing to {}"
+                        LOGGER.debug("{} was set to true but header {} was null. Producing to {}"
                                 + " topic instead.",
                             new Object[]{KafkaSinkConstants.ALLOW_TOPIC_OVERRIDE_HEADER,
                                 topicHeader, eventTopic});
@@ -179,10 +179,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 }
 
                 eventKey = headers.get(KEY_HEADER);
-                if (logger.isTraceEnabled()) {
-                    logger.trace("{Event} " + eventTopic + " : " + eventKey);
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("{Event} " + eventTopic + " : " + eventKey);
                 }
-                logger.debug("event #{}", processedEvents);
+                LOGGER.debug("event #{}", processedEvents);
 
                 // create a message and add to buffer
                 long startTime = System.currentTimeMillis();
@@ -226,7 +226,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     // which is what our consumers will expect
                     // 如果是avro 格式,对异常进行处理
                     if (useAvroEventFormat) {
-                        logger.error("Could not send event", ex);
+                        LOGGER.error("Could not send event", ex);
                         handleErrorData.accept(dataRecord, headers);
                         if (dataRecord != null) {
                             record = buildAlertInfoRecord(eventTopic, ex.getMessage(), dataRecord);
@@ -268,14 +268,14 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
     private void handleException(Transaction transaction, Exception ex)
         throws EventDeliveryException {
-        logger.error("Failed to publish events", ex);
+        LOGGER.error("Failed to publish events", ex);
         if (transaction != null) {
             try {
                 kafkaFutures.clear();
                 transaction.rollback();
                 counter.incrementRollbackCount();
             } catch (Exception e) {
-                logger.error("Transaction rollback failed", e);
+                LOGGER.error("Transaction rollback failed", e);
                 throw Throwables.propagate(e);
             }
         }
@@ -305,16 +305,16 @@ public class KafkaSink extends AbstractSink implements Configurable {
             while (this.process() == Status.READY) {
             }
         } catch (Exception ex) {
-            logger.error(ex.getMessage(), ex);
+            LOGGER.error(ex.getMessage(), ex);
         }
-        logger.info("send channel data before sink stop.");
+        LOGGER.info("send channel data before sink stop.");
 
         // 先发送统计数据再关闭
         sendCountMonitor.stop();
 
         producer.close();
         counter.stop();
-        logger.info("Kafka Sink {} stopped. Metrics: {}", getName(), counter);
+        LOGGER.info("Kafka Sink {} stopped. Metrics: {}", getName(), counter);
         super.stop();
     }
 
@@ -333,9 +333,9 @@ public class KafkaSink extends AbstractSink implements Configurable {
         String topicStr = context.getString(TOPIC_CONFIG);
         if (topicStr == null || topicStr.isEmpty()) {
             topicStr = DEFAULT_TOPIC;
-            logger.warn("Topic was not specified. Using {} as the topic.", topicStr);
+            LOGGER.warn("Topic was not specified. Using {} as the topic.", topicStr);
         } else {
-            logger.info("Using the static topic {}. This may be overridden by event headers",
+            LOGGER.info("Using the static topic {}. This may be overridden by event headers",
                 topicStr);
         }
 
@@ -343,8 +343,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         batchSize = context.getInteger(BATCH_SIZE, DEFAULT_BATCH_SIZE);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Using batch size: {}", batchSize);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Using batch size: {}", batchSize);
         }
 
         useAvroEventFormat = context.getBoolean(KafkaSinkConstants.AVRO_EVENT,
@@ -362,8 +362,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
         countMonitorInterval = context
             .getInteger(COUNT_MONITOR_INTERVAL, DEFAULT_COUNT_MONITOR_INTERVAL);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(KafkaSinkConstants.AVRO_EVENT + " set to: {}", useAvroEventFormat);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(KafkaSinkConstants.AVRO_EVENT + " set to: {}", useAvroEventFormat);
         }
 
         kafkaFutures = new LinkedList<>();
@@ -375,8 +375,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         setProducerProps(context, bootStrapServers);
 
-        if (logger.isDebugEnabled() && LogPrivacyUtil.allowLogPrintConfig()) {
-            logger.debug("Kafka producer properties: {}", kafkaProps);
+        if (LOGGER.isDebugEnabled() && LogPrivacyUtil.allowLogPrintConfig()) {
+            LOGGER.debug("Kafka producer properties: {}", kafkaProps);
         }
 
         if (counter == null) {
@@ -393,7 +393,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     private void translateOldProps(Context ctx) {
         if (!(ctx.containsKey(TOPIC_CONFIG))) {
             ctx.put(TOPIC_CONFIG, ctx.getString("topic"));
-            logger.warn("{} is deprecated. Please use the parameter {}", "topic", TOPIC_CONFIG);
+            LOGGER.warn("{} is deprecated. Please use the parameter {}", "topic", TOPIC_CONFIG);
         }
 
         //Broker List
@@ -404,7 +404,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 throw new ConfigurationException("Bootstrap Servers must be specified");
             } else {
                 ctx.put(BOOTSTRAP_SERVERS_CONFIG, brokerList);
-                logger.warn("{} is deprecated. Please use the parameter {}",
+                LOGGER.warn("{} is deprecated. Please use the parameter {}",
                     BROKER_LIST_FLUME_KEY, BOOTSTRAP_SERVERS_CONFIG);
             }
         }
@@ -414,7 +414,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
             String oldBatchSize = ctx.getString(OLD_BATCH_SIZE);
             if (oldBatchSize != null && !oldBatchSize.isEmpty()) {
                 ctx.put(BATCH_SIZE, oldBatchSize);
-                logger.warn("{} is deprecated. Please use the parameter {}", OLD_BATCH_SIZE,
+                LOGGER.warn("{} is deprecated. Please use the parameter {}", OLD_BATCH_SIZE,
                     BATCH_SIZE);
             }
         }
@@ -425,14 +425,14 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 KafkaSinkConstants.REQUIRED_ACKS_FLUME_KEY);
             if (!(requiredKey == null) && !(requiredKey.isEmpty())) {
                 ctx.put(KAFKA_PRODUCER_PREFIX + ProducerConfig.ACKS_CONFIG, requiredKey);
-                logger
+                LOGGER
                     .warn("{} is deprecated. Please use the parameter {}", REQUIRED_ACKS_FLUME_KEY,
                         KAFKA_PRODUCER_PREFIX + ProducerConfig.ACKS_CONFIG);
             }
         }
 
         if (ctx.containsKey(KEY_SERIALIZER_KEY)) {
-            logger.warn(
+            LOGGER.warn(
                 "{} is deprecated. Flume now uses the latest Kafka producer which implements "
                     + "a different interface for serializers. Please use the parameter {}",
                 KEY_SERIALIZER_KEY,
@@ -440,7 +440,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         }
 
         if (ctx.containsKey(MESSAGE_SERIALIZER_KEY)) {
-            logger.warn(
+            LOGGER.warn(
                 "{} is deprecated. Flume now uses the latest Kafka producer which implements "
                     + "a different interface for serializers. Please use the parameter {}",
                 MESSAGE_SERIALIZER_KEY,
@@ -508,11 +508,12 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 }
                 Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
             } catch (IOException e) {
-                logger.error("Error when write message to error file", e);
+                LOGGER.error("Error when write message to error file", e);
             }
         };
 
     private void errorCounter(Map<String, String> headers) {
+        LOGGER.debug("errorCounter, headers: {}", headers);
         String flowTopic = headers.get(FLOW_COUNTER_TOPIC);
         if (flowTopic != null) {
             String flowTable = headers.get(FLOW_COUNTER_TABLE);
@@ -562,17 +563,17 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         public void onCompletion(RecordMetadata metadata, Exception exception) {
             if (exception != null) {
-                logger.debug("Error sending message to Kafka {} ", exception.getMessage());
+                LOGGER.debug("Error sending message to Kafka {} ", exception.getMessage());
                 this.handleErrorFun.accept(this.record, headers);
             }
 
-            if (logger.isDebugEnabled()) {
+            if (LOGGER.isDebugEnabled()) {
                 long eventElapsedTime = System.currentTimeMillis() - startTime;
                 if (metadata != null) {
-                    logger.debug("Acked message partition:{} ofset:{}", metadata.partition(),
+                    LOGGER.debug("Acked message partition:{} ofset:{}", metadata.partition(),
                         metadata.offset());
                 }
-                logger.debug("Elapsed time for send: {}", eventElapsedTime);
+                LOGGER.debug("Elapsed time for send: {}", eventElapsedTime);
             }
         }
 

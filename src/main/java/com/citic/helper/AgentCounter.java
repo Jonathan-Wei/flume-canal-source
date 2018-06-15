@@ -63,6 +63,7 @@ public class AgentCounter {
     public static List<ProducerRecord> flowCounterToEvents(boolean useAvro) {
         List<ProducerRecord> records = Lists.newArrayList();
         LOGGER.debug("AgentCounter CACHE_COUNTER: {}", CACHE_COUNTER);
+        LOGGER.debug("AgentCounter CACHE_ERROR_COUNTER: {}", CACHE_ERROR_COUNTER);
 
         CACHE_COUNTER.forEach((key, value) -> {
             if (useAvro) {
