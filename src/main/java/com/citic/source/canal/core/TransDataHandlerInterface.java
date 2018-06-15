@@ -5,7 +5,7 @@ import java.util.Map;
 
 public interface TransDataHandlerInterface {
 
-    Map<String, String> getDataMap (CanalEntry.RowData rowData,
+    Map<String, String> getDataMap(CanalEntry.RowData rowData,
         CanalEntry.Header entryHeader,
         CanalEntry.EventType eventType);
 

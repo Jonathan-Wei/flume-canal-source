@@ -18,6 +18,15 @@ public class KafkaSinkConstants {
     public static final String SCHEMA_NAME = "schema";
     public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = "topic";
 
+
+    public static final String FLOW_COUNTER_TOPIC = "flow_topic";
+    public static final String FLOW_COUNTER_TABLE = "flow_table";
+    public static final String FLOW_COUNTER_FROM_DB = "flow_fromDb";
+    public static final String FLOW_COUNTER_TIME_PERIOD = "flow_timePeriod";
+
+    public static final String AGENT_COUNTER_AGENT_IP = "agent_agentIp";
+    public static final String AGENT_COUNTER_MINUTE_KEY = "agent_minuteKey";
+
     public static final String TOPIC_OVERRIDE_HEADER = "topicHeader";
     public static final String SCHEMA_REGISTRY_URL_NAME = "schema.registry.url";
 

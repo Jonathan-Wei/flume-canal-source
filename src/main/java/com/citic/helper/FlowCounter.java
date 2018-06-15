@@ -32,6 +32,8 @@ public class FlowCounter {
     private static final String SUPPORT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private static final String AVRO_FLOW_COUNTER_TOPIC = "avro_flow_counter";
     private static final String JSON_FLOW_COUNTER_TOPIC = "json_flow_counter";
+    private static final String AVRO_FLOW_ERROR_COUNTER_TOPIC = "avro_flow_error_counter";
+    private static final String JSON_FLOW_ERROR_COUNTER_TOPIC = "json_flow_error_counter";
 
     private static final String COUNT_TOPIC = "topic";
     private static final String COUNT_TABLE = "table";
@@ -44,7 +46,13 @@ public class FlowCounter {
         .newArrayList(COUNT_TOPIC, COUNT_TABLE, COUNT_FROM,
             COUNT_PERIOD, CURRENT_TIME, COUNT);
 
-    private static final Map<CounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
+    private static final Map<FlowCounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
+        .maxSize(10000)
+        .expiration(2, TimeUnit.HOURS)
+        .expirationPolicy(ExpirationPolicy.CREATED)
+        .build();
+
+    private static final Map<FlowCounterKey, AtomicLong> ERROR_CACHE_COUNTER = ExpiringMap.builder()
         .maxSize(10000)
         .expiration(2, TimeUnit.HOURS)
         .expirationPolicy(ExpirationPolicy.CREATED)
@@ -62,16 +70,25 @@ public class FlowCounter {
 
         CACHE_COUNTER.forEach((key, value) -> {
             if (useAvro) {
-                records.add(buildEachToEvent(key, value));
+                records.add(buildEachToEvent(key, value, AVRO_FLOW_COUNTER_TOPIC));
             } else {
-                records.add(buildEachToJsonEvent(key, value));
+                records.add(buildEachToJsonEvent(key, value, JSON_FLOW_COUNTER_TOPIC));
+            }
+        });
+
+        ERROR_CACHE_COUNTER.forEach((key, value) -> {
+            if (useAvro) {
+                records.add(buildEachToEvent(key, value, AVRO_FLOW_ERROR_COUNTER_TOPIC));
+            } else {
+                records.add(buildEachToJsonEvent(key, value, JSON_FLOW_ERROR_COUNTER_TOPIC));
             }
         });
         return records;
     }
 
-    private static ProducerRecord buildEachToEvent(CounterKey key, AtomicLong value) {
-        Schema schema = SchemaCache.getSchema(ATTR_LIST, AVRO_FLOW_COUNTER_TOPIC);
+    private static ProducerRecord buildEachToEvent(FlowCounterKey key, AtomicLong value,
+        String topic) {
+        Schema schema = SchemaCache.getSchema(ATTR_LIST, topic);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
         avroRecord.put(COUNT_TOPIC, key.topic);
@@ -81,11 +98,12 @@ public class FlowCounter {
         avroRecord.put(CURRENT_TIME, new SimpleDateFormat(SUPPORT_TIME_FORMAT).format(new Date()));
         avroRecord.put(COUNT, value.toString());
 
-        return new ProducerRecord<Object, Object>(AVRO_FLOW_COUNTER_TOPIC, key.timePeriod,
+        return new ProducerRecord<Object, Object>(topic, key.timePeriod,
             avroRecord);
     }
 
-    private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
+    private static ProducerRecord buildEachToJsonEvent(FlowCounterKey key, AtomicLong value,
+        String topic) {
         Map<String, String> eventData = Maps.newHashMap();
 
         eventData.put(COUNT_TOPIC, key.topic);
@@ -97,10 +115,21 @@ public class FlowCounter {
 
         byte[] eventBody;
         eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
-        return new ProducerRecord<Object, Object>(JSON_FLOW_COUNTER_TOPIC, key.timePeriod,
+        return new ProducerRecord<Object, Object>(topic, key.timePeriod,
             eventBody);
     }
 
+
+    /**
+     * Increment error by key long.
+     *
+     * @param key the key
+     * @return the long
+     */
+    public static long incrementErrorByKey(FlowCounterKey key) {
+        LOGGER.debug("FlowErrorCounter, key: {}", key.toString());
+        return ERROR_CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
+    }
 
     /**
      * Increment.
@@ -109,14 +138,17 @@ public class FlowCounter {
      * @param table the table
      * @param fromDb the from db
      * @param fieldValue the field value
+     * @return the flow counter key
      */
-    public static void increment(String topic, String table, String fromDb,
+    public static FlowCounterKey increment(String topic, String table, String fromDb,
         String fieldValue) {
         String timePeriod = getTimePeriodKey(fieldValue);
+        FlowCounterKey totalKey = null;
         if (timePeriod != null) {
-            CounterKey totalKey = new CounterKey(topic, table, fromDb, timePeriod);
+            totalKey = new FlowCounterKey(topic, table, fromDb, timePeriod);
             incrementByKey(totalKey);
         }
+        return totalKey;
     }
 
     private static String getTimePeriodKey(String timeStamp) {
@@ -131,28 +163,75 @@ public class FlowCounter {
         }
     }
 
-    private static long incrementByKey(CounterKey key) {
+    private static long incrementByKey(FlowCounterKey key) {
         LOGGER.debug("FlowCounter, key: {}", key.toString());
         return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
-    private static class CounterKey {
+    /**
+     * The type Flow counter key.
+     */
+    public static class FlowCounterKey {
 
         private final String topic;
         private final String table;
         private final String fromDb;
         private final String timePeriod;
 
-        private CounterKey(String topic, String table, String fromDb, String timePeriod) {
+        /**
+         * Instantiates a new Flow counter key.
+         *
+         * @param topic the topic
+         * @param table the table
+         * @param fromDb the from db
+         * @param timePeriod the time period
+         */
+        public FlowCounterKey(String topic, String table, String fromDb, String timePeriod) {
             this.topic = topic;
             this.table = table;
             this.fromDb = fromDb;
             this.timePeriod = timePeriod;
         }
 
+        /**
+         * Gets topic.
+         *
+         * @return the topic
+         */
+        public String getTopic() {
+            return topic;
+        }
+
+        /**
+         * Gets table.
+         *
+         * @return the table
+         */
+        public String getTable() {
+            return table;
+        }
+
+        /**
+         * Gets from db.
+         *
+         * @return the from db
+         */
+        public String getFromDb() {
+            return fromDb;
+        }
+
+        /**
+         * Gets time period.
+         *
+         * @return the time period
+         */
+        public String getTimePeriod() {
+            return timePeriod;
+        }
+
         @Override
         public String toString() {
-            return "CounterKey{"
+            return "FlowCounterKey{"
                 + "topic='" + topic + '\''
                 + ", table='" + table + '\''
                 + ", fromDb='" + fromDb + '\''
@@ -169,7 +248,7 @@ public class FlowCounter {
                 return false;
             }
 
-            CounterKey that = (CounterKey) o;
+            FlowCounterKey that = (FlowCounterKey) o;
 
             return topic.equals(that.topic)
                 && table.equals(that.table)

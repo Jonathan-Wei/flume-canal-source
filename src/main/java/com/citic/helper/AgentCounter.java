@@ -29,6 +29,8 @@ public class AgentCounter {
 
     private static final String AVRO_AGENT_COUNTER_TOPIC = "avro_agent_counter";
     private static final String JSON_AGENT_COUNTER_TOPIC = "json_agent_counter";
+    private static final String AVRO_AGENT_ERROR_COUNTER_TOPIC = "avro_agent_error_counter";
+    private static final String JSON_AGENT_ERROR_COUNTER_TOPIC = "json_agent_error_counter";
 
     private static final String COUNT_AGENT = "agent";
     private static final String COUNT_PERIOD = "period";
@@ -38,7 +40,14 @@ public class AgentCounter {
         .newArrayList(COUNT_AGENT, COUNT_PERIOD, COUNT);
 
 
-    private static final Map<CounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
+    private static final Map<AgentCounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
+        .maxSize(10000)
+        .expiration(10, TimeUnit.MINUTES)
+        .expirationPolicy(ExpirationPolicy.CREATED)
+        .build();
+
+    private static final Map<AgentCounterKey, AtomicLong> CACHE_ERROR_COUNTER = ExpiringMap
+        .builder()
         .maxSize(10000)
         .expiration(10, TimeUnit.MINUTES)
         .expirationPolicy(ExpirationPolicy.CREATED)
@@ -57,29 +66,40 @@ public class AgentCounter {
 
         CACHE_COUNTER.forEach((key, value) -> {
             if (useAvro) {
-                records.add(buildEachToEvent(key, value));
+                records.add(buildEachToEvent(key, value, AVRO_AGENT_COUNTER_TOPIC));
             } else {
-                records.add(buildEachToJsonEvent(key, value));
+                records.add(buildEachToJsonEvent(key, value, JSON_AGENT_COUNTER_TOPIC));
             }
         });
+
+        CACHE_ERROR_COUNTER.forEach((key, value) -> {
+            if (useAvro) {
+                records.add(buildEachToEvent(key, value, AVRO_AGENT_ERROR_COUNTER_TOPIC));
+            } else {
+                records.add(buildEachToJsonEvent(key, value, JSON_AGENT_ERROR_COUNTER_TOPIC));
+            }
+        });
+
         return records;
     }
 
 
-    private static ProducerRecord buildEachToEvent(CounterKey key, AtomicLong value) {
+    private static ProducerRecord buildEachToEvent(AgentCounterKey key, AtomicLong value,
+        String topic) {
 
-        Schema schema = SchemaCache.getSchema(ATTR_LIST, AVRO_AGENT_COUNTER_TOPIC);
+        Schema schema = SchemaCache.getSchema(ATTR_LIST, topic);
         GenericRecord avroRecord = new GenericData.Record(schema);
 
         avroRecord.put(COUNT_AGENT, key.agentIp);
         avroRecord.put(COUNT_PERIOD, key.minuteKey);
         avroRecord.put(COUNT, value.toString());
 
-        return new ProducerRecord<Object, Object>(AVRO_AGENT_COUNTER_TOPIC, key.minuteKey,
+        return new ProducerRecord<Object, Object>(topic, key.minuteKey,
             avroRecord);
     }
 
-    private static ProducerRecord buildEachToJsonEvent(CounterKey key, AtomicLong value) {
+    private static ProducerRecord buildEachToJsonEvent(AgentCounterKey key, AtomicLong value,
+        String topic) {
         Map<String, String> eventData = Maps.newHashMap();
 
         eventData.put(COUNT_AGENT, key.agentIp);
@@ -88,7 +108,7 @@ public class AgentCounter {
 
         byte[] eventBody;
         eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
-        return new ProducerRecord<Object, Object>(JSON_AGENT_COUNTER_TOPIC, key.minuteKey,
+        return new ProducerRecord<Object, Object>(topic, key.minuteKey,
             eventBody);
     }
 
@@ -97,17 +117,24 @@ public class AgentCounter {
      *
      * @param agentIp the agent ip
      */
-    public static void increment(String agentIp) {
+    public static AgentCounterKey increment(String agentIp) {
         String minuteKey = Utility.Minutes5.getCurrentRounded5Minutes();
-        CounterKey counterKey = new CounterKey(agentIp, minuteKey);
+        AgentCounterKey counterKey = new AgentCounterKey(agentIp, minuteKey);
         incrementByKey(counterKey);
+        return counterKey;
     }
 
-    private static long incrementByKey(CounterKey key) {
+    public static long incrementErrorByKey(AgentCounterKey key) {
+        LOGGER.debug("AgentErrorCounter, key: {}", key.toString());
+        return CACHE_ERROR_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
+    }
+
+    private static long incrementByKey(AgentCounterKey key) {
+        LOGGER.debug("AgentCounter, key: {}", key.toString());
         return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
-    private static class CounterKey {
+    public static class AgentCounterKey {
 
         private final String agentIp;
         private final String minuteKey;
@@ -118,9 +145,17 @@ public class AgentCounter {
          * @param agentIp the agent ip
          * @param minuteKey the minute key
          */
-        CounterKey(String agentIp, String minuteKey) {
+        public AgentCounterKey(String agentIp, String minuteKey) {
             this.agentIp = agentIp;
             this.minuteKey = minuteKey;
+        }
+
+        public String getAgentIp() {
+            return agentIp;
+        }
+
+        public String getMinuteKey() {
+            return minuteKey;
         }
 
         @Override
@@ -132,7 +167,7 @@ public class AgentCounter {
                 return false;
             }
 
-            CounterKey that = (CounterKey) o;
+            AgentCounterKey that = (AgentCounterKey) o;
 
             return agentIp.equals(that.agentIp) && minuteKey.equals(that.minuteKey);
 
@@ -147,7 +182,7 @@ public class AgentCounter {
 
         @Override
         public String toString() {
-            return "CounterKey{"
+            return "FlowCounterKey{"
                 + "agentIp='" + agentIp + '\''
                 + ", minuteKey='" + minuteKey + '\''
                 + '}';

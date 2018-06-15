@@ -1,6 +1,12 @@
 package com.citic.source.canal.resolve;
 
+import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_AGENT_IP;
+import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_MINUTE_KEY;
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_FROM_DB;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TABLE;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TIME_PERIOD;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.KEY_HEADER;
 import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_NAME;
 import static com.citic.source.canal.CanalSourceConstants.DECIMAL_FORMAT_3;
@@ -16,7 +22,9 @@ import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.AgentCounter;
+import com.citic.helper.AgentCounter.AgentCounterKey;
 import com.citic.helper.FlowCounter;
+import com.citic.helper.FlowCounter.FlowCounterKey;
 import com.citic.helper.SchemaCache;
 import com.citic.source.canal.CanalConf;
 import com.citic.source.canal.core.AbstractCommonDataHandler;
@@ -108,20 +116,21 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
         Map<String, String> eventData = handleRowData(rowData, entryHeader, eventType);
         LOGGER.debug("eventData handleRowData:{}", eventData);
 
-        if (!canalConf.isShutdownFlowCounter()) {
-            doDataCount(topic, keyName, eventData, eventType, entryHeader);
-        }
-
         String pk = getPk(rowData);
         // 处理 event Header
         LOGGER.debug("RowData pk:{}", pk);
         Map<String, String> header = handleRowDataHeader(topic, pk);
 
+        if (!canalConf.isShutdownFlowCounter()) {
+            doDataCount(topic, keyName, eventData, eventType, entryHeader, header);
+        }
+
         return dataToEvent(eventData, header, topic);
     }
 
     private void doDataCount(String topic, String keyName, Map<String, String> eventData,
-        CanalEntry.EventType eventType, CanalEntry.Header entryHeader) {
+        CanalEntry.EventType eventType, CanalEntry.Header entryHeader,
+        Map<String, String> headerData) {
         // topic 数据量统计
         String timeFieldName = this.getTimeFieldName(topic);
         if (timeFieldName != null) {
@@ -132,10 +141,32 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
             } else {
                 timeFieldValue = eventData.get(timeFieldName);
             }
-            FlowCounter.increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
+            FlowCounterKey flowCounterKey = FlowCounter
+                .increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
+            putFlowCounterKeyToHeader(headerData, flowCounterKey);
         }
         // agent 数据量统计
-        AgentCounter.increment(canalConf.getAgentIpAddress());
+        AgentCounterKey agentCounterKey = AgentCounter.increment(canalConf.getAgentIpAddress());
+        putAgentCounterKeyToHeader(headerData, agentCounterKey);
+    }
+
+    // 为了数据出现异常的时候进行异常统计
+    private void putFlowCounterKeyToHeader(Map<String, String> header, FlowCounterKey counterKey) {
+        if (counterKey != null) {
+            header.put(FLOW_COUNTER_TOPIC, counterKey.getTopic());
+            header.put(FLOW_COUNTER_TABLE, counterKey.getTable());
+            header.put(FLOW_COUNTER_FROM_DB, counterKey.getFromDb());
+            header.put(FLOW_COUNTER_TIME_PERIOD, counterKey.getTimePeriod());
+        }
+    }
+
+    // 为了数据出现异常的时候进行异常统计
+    private void putAgentCounterKeyToHeader(Map<String, String> header,
+        AgentCounterKey counterKey) {
+        if (counterKey != null) {
+            header.put(AGENT_COUNTER_AGENT_IP, counterKey.getAgentIp());
+            header.put(AGENT_COUNTER_MINUTE_KEY, counterKey.getMinuteKey());
+        }
     }
 
     abstract Event dataToEvent(Map<String, String> eventData,

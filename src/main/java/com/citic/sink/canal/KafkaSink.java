@@ -1,5 +1,7 @@
 package com.citic.sink.canal;
 
+import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_AGENT_IP;
+import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_MINUTE_KEY;
 import static com.citic.sink.canal.KafkaSinkConstants.ALERT_EVENT_DATA;
 import static com.citic.sink.canal.KafkaSinkConstants.ALERT_EVENT_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.ALERT_EXCEPTION;
@@ -17,6 +19,10 @@ import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_COUNT_MONITOR_INTE
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_KEY_SERIALIZER;
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_VALUE_SERIAIZER;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_FROM_DB;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TABLE;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TIME_PERIOD;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.KAFKA_PRODUCER_PREFIX;
 import static com.citic.sink.canal.KafkaSinkConstants.KEY_HEADER;
 import static com.citic.sink.canal.KafkaSinkConstants.KEY_SERIALIZER_KEY;
@@ -28,6 +34,10 @@ import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_REGISTRY_URL_NAME;
 import static com.citic.sink.canal.KafkaSinkConstants.SEND_ERROR_FILE_DEFAULT;
 import static com.citic.sink.canal.KafkaSinkConstants.TOPIC_CONFIG;
 
+import com.citic.helper.AgentCounter;
+import com.citic.helper.AgentCounter.AgentCounterKey;
+import com.citic.helper.FlowCounter;
+import com.citic.helper.FlowCounter.FlowCounterKey;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.google.common.base.Charsets;
@@ -44,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -204,7 +215,9 @@ public class KafkaSink extends AbstractSink implements Configurable {
                             dataRecord);
                     }
                     kafkaFutures
-                        .add(producer.send(record, new SinkCallback(startTime, dataRecord, this)));
+                        .add(producer.send(record,
+                            new SinkCallback(startTime, dataRecord, headers,
+                                this.handleErrorData)));
                 } catch (NumberFormatException ex) {
                     throw new EventDeliveryException("Non integer partition id specified", ex);
                 } catch (Exception ex) {
@@ -214,14 +227,15 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     // 如果是avro 格式,对异常进行处理
                     if (useAvroEventFormat) {
                         logger.error("Could not send event", ex);
-                        handleErrorData(dataRecord);
-                        record = buildAlertInfoRecord(eventTopic, ex.getMessage(), dataRecord);
-                        kafkaFutures.add(producer.send(record));
+                        handleErrorData.accept(dataRecord, headers);
+                        if (dataRecord != null) {
+                            record = buildAlertInfoRecord(eventTopic, ex.getMessage(), dataRecord);
+                            kafkaFutures.add(producer.send(record));
+                        }
                     } else {
                         throw new EventDeliveryException("Could not send event", ex);
                     }
                 }
-
             }
 
             //Prevent linger.ms from holding the batch
@@ -478,20 +492,41 @@ public class KafkaSink extends AbstractSink implements Configurable {
     /*
      * 对出错的数据进行处理，并 count 错误日志行数
      * */
-    private void handleErrorData(Object dataRecord) {
-        if (dataRecord == null) {
-            return;
-        }
-        try {
-            String jsonString;
-            if (useAvroEventFormat) {
-                jsonString = Utility.avroToJson((GenericRecord) dataRecord);
-            } else {
-                jsonString = new String((byte[]) dataRecord, Charset.forName("UTF-8"));
+    private BiConsumer<Object, Map<String, String>> handleErrorData =
+        (Object dataRecord, Map<String, String> headers) -> {
+            if (dataRecord == null) {
+                return;
             }
-            Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
-        } catch (IOException e) {
-            logger.error("Error when write message to error file", e);
+            // 对出现异常的数据进行统计
+            errorCounter(headers);
+            try {
+                String jsonString;
+                if (useAvroEventFormat) {
+                    jsonString = Utility.avroToJson((GenericRecord) dataRecord);
+                } else {
+                    jsonString = new String((byte[]) dataRecord, Charset.forName("UTF-8"));
+                }
+                Files.append(jsonString + "\n", kafkaSendErrorFile, Charsets.UTF_8);
+            } catch (IOException e) {
+                logger.error("Error when write message to error file", e);
+            }
+        };
+
+    private void errorCounter(Map<String, String> headers) {
+        String flowTopic = headers.get(FLOW_COUNTER_TOPIC);
+        if (flowTopic != null) {
+            String flowTable = headers.get(FLOW_COUNTER_TABLE);
+            String flowFromDb = headers.get(FLOW_COUNTER_FROM_DB);
+            String flowTimePeriod = headers.get(FLOW_COUNTER_TIME_PERIOD);
+
+            FlowCounter.incrementErrorByKey(
+                new FlowCounterKey(flowTopic, flowTable, flowFromDb, flowTimePeriod));
+        }
+
+        String agentIp = headers.get(AGENT_COUNTER_AGENT_IP);
+        if (agentIp != null) {
+            String minuteKey = headers.get(AGENT_COUNTER_MINUTE_KEY);
+            AgentCounter.incrementErrorByKey(new AgentCounterKey(agentIp, minuteKey));
         }
     }
 
@@ -514,18 +549,21 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         private final long startTime;
         private final Object record;
-        private final KafkaSink kafkaSink;
+        private final BiConsumer<Object, Map<String, String>> handleErrorFun;
+        private final Map<String, String> headers;
 
-        SinkCallback(long startTime, Object record, KafkaSink kafkaSink) {
+        SinkCallback(long startTime, Object record, Map<String, String> headers,
+            BiConsumer<Object, Map<String, String>> handleErrorFun) {
             this.record = record;
             this.startTime = startTime;
-            this.kafkaSink = kafkaSink;
+            this.handleErrorFun = handleErrorFun;
+            this.headers = headers;
         }
 
         public void onCompletion(RecordMetadata metadata, Exception exception) {
             if (exception != null) {
                 logger.debug("Error sending message to Kafka {} ", exception.getMessage());
-                kafkaSink.handleErrorData(this.record);
+                this.handleErrorFun.accept(this.record, headers);
             }
 
             if (logger.isDebugEnabled()) {
@@ -537,6 +575,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 logger.debug("Elapsed time for send: {}", eventElapsedTime);
             }
         }
+
     }
 
 

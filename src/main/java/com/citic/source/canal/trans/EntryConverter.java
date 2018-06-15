@@ -172,8 +172,9 @@ public class EntryConverter implements EntryConverterInterface {
             .forEach(item -> {
                 if (item.contains(":")) { // 字段过滤
                     String[] result = item.split(":");
-                    Preconditions.checkArgument(result.length == 2,
-                        "tableFieldsFilter format incorrect eg: test1\\..*;test.test1;db.tbl1:id,name");
+                    Preconditions
+                        .checkArgument(result.length == 2,
+                        "tableFieldsFilter format incorrect eg: test1\\..*;db.tbl1:id,name");
                     String table = result[0].trim();
                     String fields = result[1].trim();
 

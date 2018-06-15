@@ -19,6 +19,9 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The type Data handler.
+ */
 public class DataHandler extends AbstractCommonDataHandler implements
     TransDataHandlerInterface {
 
@@ -28,6 +31,13 @@ public class DataHandler extends AbstractCommonDataHandler implements
     private final BiFunction<String, String, Boolean> removeColumnFilterFun;
     private final Function<String, Boolean> removeRowFilterFun;
 
+    /**
+     * Instantiates a new Data handler.
+     *
+     * @param canalConf the canal conf
+     * @param removeRowFilterFun the remove row filter fun
+     * @param removeColumnFilterFun the remove column filter fun
+     */
     public DataHandler(CanalConf canalConf,
         Function<String, Boolean> removeRowFilterFun,
         BiFunction<String, String, Boolean> removeColumnFilterFun) {
