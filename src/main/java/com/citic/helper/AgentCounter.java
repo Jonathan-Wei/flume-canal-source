@@ -183,7 +183,7 @@ public class AgentCounter {
 
         @Override
         public String toString() {
-            return "FlowCounterKey{"
+            return "AgentCounterKey{"
                 + "agentIp='" + agentIp + '\''
                 + ", minuteKey='" + minuteKey + '\''
                 + '}';

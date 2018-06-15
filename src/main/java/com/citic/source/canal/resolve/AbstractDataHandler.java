@@ -143,6 +143,8 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
             } else {
                 timeFieldValue = eventData.get(timeFieldName);
             }
+            LOGGER.debug("doDataCount timeFieldValue: {}", timeFieldValue);
+            
             FlowCounterKey flowCounterKey = FlowCounter
                 .increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
             Utility.putFlowCounterKeyToHeader(headerData, flowCounterKey);
