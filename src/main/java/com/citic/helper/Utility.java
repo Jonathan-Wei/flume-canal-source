@@ -1,7 +1,15 @@
 package com.citic.helper;
 
+import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_AGENT_IP;
+import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_MINUTE_KEY;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_FROM_DB;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TABLE;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TIME_PERIOD;
+import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TOPIC;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.citic.helper.AgentCounter.AgentCounterKey;
+import com.citic.helper.FlowCounter.FlowCounterKey;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -16,6 +24,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.GregorianCalendar;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -99,6 +108,35 @@ public class Utility {
         }
     }
 
+
+    /**
+     * Put flow counter key to header.
+     *
+     * @param header the header
+     * @param counterKey the counter key
+     */
+    public static void putFlowCounterKeyToHeader(Map<String, String> header, FlowCounterKey counterKey) {
+        if (counterKey != null) {
+            header.put(FLOW_COUNTER_TOPIC, counterKey.getTopic());
+            header.put(FLOW_COUNTER_TABLE, counterKey.getTable());
+            header.put(FLOW_COUNTER_FROM_DB, counterKey.getFromDb());
+            header.put(FLOW_COUNTER_TIME_PERIOD, counterKey.getTimePeriod());
+        }
+    }
+
+    /**
+     * Put agent counter key to header.
+     *
+     * @param header the header
+     * @param counterKey the counter key
+     */
+    public static void putAgentCounterKeyToHeader(Map<String, String> header,
+        AgentCounterKey counterKey) {
+        if (counterKey != null) {
+            header.put(AGENT_COUNTER_AGENT_IP, counterKey.getAgentIp());
+            header.put(AGENT_COUNTER_MINUTE_KEY, counterKey.getMinuteKey());
+        }
+    }
 
     /**
      * The type Minutes 5.

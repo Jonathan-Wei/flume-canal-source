@@ -26,6 +26,7 @@ import com.citic.helper.AgentCounter.AgentCounterKey;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.FlowCounter.FlowCounterKey;
 import com.citic.helper.SchemaCache;
+import com.citic.helper.Utility;
 import com.citic.source.canal.CanalConf;
 import com.citic.source.canal.core.AbstractCommonDataHandler;
 import com.citic.source.canal.core.DataHandlerInterface;
@@ -143,30 +144,11 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
             }
             FlowCounterKey flowCounterKey = FlowCounter
                 .increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
-            putFlowCounterKeyToHeader(headerData, flowCounterKey);
+            Utility.putFlowCounterKeyToHeader(headerData, flowCounterKey);
         }
         // agent 数据量统计
         AgentCounterKey agentCounterKey = AgentCounter.increment(canalConf.getAgentIpAddress());
-        putAgentCounterKeyToHeader(headerData, agentCounterKey);
-    }
-
-    // 为了数据出现异常的时候进行异常统计
-    private void putFlowCounterKeyToHeader(Map<String, String> header, FlowCounterKey counterKey) {
-        if (counterKey != null) {
-            header.put(FLOW_COUNTER_TOPIC, counterKey.getTopic());
-            header.put(FLOW_COUNTER_TABLE, counterKey.getTable());
-            header.put(FLOW_COUNTER_FROM_DB, counterKey.getFromDb());
-            header.put(FLOW_COUNTER_TIME_PERIOD, counterKey.getTimePeriod());
-        }
-    }
-
-    // 为了数据出现异常的时候进行异常统计
-    private void putAgentCounterKeyToHeader(Map<String, String> header,
-        AgentCounterKey counterKey) {
-        if (counterKey != null) {
-            header.put(AGENT_COUNTER_AGENT_IP, counterKey.getAgentIp());
-            header.put(AGENT_COUNTER_MINUTE_KEY, counterKey.getMinuteKey());
-        }
+        Utility.putAgentCounterKeyToHeader(headerData, agentCounterKey);
     }
 
     abstract Event dataToEvent(Map<String, String> eventData,

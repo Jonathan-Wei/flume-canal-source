@@ -13,8 +13,11 @@ import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.citic.helper.AgentCounter;
+import com.citic.helper.AgentCounter.AgentCounterKey;
 import com.citic.helper.FlowCounter;
+import com.citic.helper.FlowCounter.FlowCounterKey;
 import com.citic.helper.SchemaCache;
+import com.citic.helper.Utility;
 import com.citic.source.canal.AbstractEntrySqlHandler.Avro;
 import com.citic.source.canal.CanalConf;
 import com.citic.source.canal.core.EntryConverterInterface;
@@ -174,7 +177,7 @@ public class EntryConverter implements EntryConverterInterface {
                     String[] result = item.split(":");
                     Preconditions
                         .checkArgument(result.length == 2,
-                        "tableFieldsFilter format incorrect eg: test1\\..*;db.tbl1:id,name");
+                            "tableFieldsFilter format incorrect eg: test1\\..*;db.tbl1:id,name");
                     String table = result[0].trim();
                     String fields = result[1].trim();
 
@@ -230,7 +233,7 @@ public class EntryConverter implements EntryConverterInterface {
         Map<String, String> header = handleRowDataHeader(topic);
 
         if (!canalConf.isShutdownFlowCounter()) {
-            doDataCount(topic, allTables, tansEndHeader);
+            doDataCount(topic, allTables, tansEndHeader, header);
         }
 
         if (this.userAvro) {
@@ -240,11 +243,16 @@ public class EntryConverter implements EntryConverterInterface {
         }
     }
 
-    private void doDataCount(String topic, String tableKey, CanalEntry.Header entryHeader) {
+    private void doDataCount(String topic, String tableKey, CanalEntry.Header entryHeader,
+        Map<String, String> headerData) {
         String timeFieldValue = dateFormat.format(new Date(entryHeader.getExecuteTime()));
         // 事务封装不能确定单个表，因此传入空值
-        FlowCounter.increment(topic, tableKey, canalConf.getFromDbIp(), timeFieldValue);
-        AgentCounter.increment(canalConf.getAgentIpAddress());
+        FlowCounterKey flowCounterKey = FlowCounter
+            .increment(topic, tableKey, canalConf.getFromDbIp(), timeFieldValue);
+        Utility.putFlowCounterKeyToHeader(headerData, flowCounterKey);
+
+        AgentCounterKey agentCounterKey = AgentCounter.increment(canalConf.getAgentIpAddress());
+        Utility.putAgentCounterKeyToHeader(headerData, agentCounterKey);
     }
 
     @Override
