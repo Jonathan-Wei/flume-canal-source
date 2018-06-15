@@ -134,6 +134,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
         Map<String, String> headerData) {
         // topic 数据量统计
         String timeFieldName = this.getTimeFieldName(topic);
+        LOGGER.debug("doDataCount timeFieldName: {}", timeFieldName);
         if (timeFieldName != null) {
             String timeFieldValue;
             if (eventType == CanalEntry.EventType.DELETE) {
