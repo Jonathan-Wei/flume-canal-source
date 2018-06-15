@@ -1,12 +1,6 @@
 package com.citic.source.canal.resolve;
 
-import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_AGENT_IP;
-import static com.citic.sink.canal.KafkaSinkConstants.AGENT_COUNTER_MINUTE_KEY;
 import static com.citic.sink.canal.KafkaSinkConstants.DEFAULT_TOPIC_OVERRIDE_HEADER;
-import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_FROM_DB;
-import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TABLE;
-import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TIME_PERIOD;
-import static com.citic.sink.canal.KafkaSinkConstants.FLOW_COUNTER_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.KEY_HEADER;
 import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_NAME;
 import static com.citic.source.canal.CanalSourceConstants.DECIMAL_FORMAT_3;
@@ -144,7 +138,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
                 timeFieldValue = eventData.get(timeFieldName);
             }
             LOGGER.debug("doDataCount timeFieldValue: {}", timeFieldValue);
-            
+
             FlowCounterKey flowCounterKey = FlowCounter
                 .increment(topic, keyName, canalConf.getFromDbIp(), timeFieldValue);
             Utility.putFlowCounterKeyToHeader(headerData, flowCounterKey);
@@ -215,7 +209,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
         private final Map<String, String> topicToSchemaMap = Maps.newHashMap();
 
         // topic -> firstSchemaField
-        private final Map<String, String> topicToFirstSchemaField = Maps.newHashMap();
+        private final Map<String, String> topicToFirstTableField = Maps.newHashMap();
 
         // topic -> schema fields list
         private final Map<String, Set<String>> topicToSchemaFields = Maps.newHashMap();
@@ -277,7 +271,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
                     counter[0] += 1;
 
                     Set<String> schemaFields = Sets.newLinkedHashSet();
-                    final String[] firstSchemaField = {null};
+                    final String[] firstTableField = {null};
                     Splitter.on(",")
                         .omitEmptyStrings()
                         .trimResults()
@@ -294,8 +288,8 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
                                 .checkArgument(!Strings.isNullOrEmpty(fieldTableSchema[1].trim()),
                                     "schema field cannot empty");
 
-                            if (firstSchemaField[0] == null) {
-                                firstSchemaField[0] = fieldTableSchema[1];
+                            if (firstTableField[0] == null) {
+                                firstTableField[0] = fieldTableSchema[0];
                             }
 
                             // 更新时间字段在字段列表中的顺序
@@ -311,8 +305,8 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
 
                         });
 
-                    if (firstSchemaField[0] != null) {
-                        topicToFirstSchemaField.put(topic, firstSchemaField[0]);
+                    if (firstTableField[0] != null) {
+                        topicToFirstTableField.put(topic, firstTableField[0]);
                     }
 
                     topicToSchemaFields.put(topic, schemaFields);
@@ -321,7 +315,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
 
         @Override
         String getTimeFieldName(String topic) {
-            return topicToFirstSchemaField.get(topic);
+            return topicToFirstTableField.get(topic);
         }
 
         /*
