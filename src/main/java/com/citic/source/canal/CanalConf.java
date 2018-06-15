@@ -36,16 +36,6 @@ public class CanalConf {
 
     private String tableToTopicMap;
     private String tableFieldsFilter;
-    // trans only
-    private String removeFilter;
-
-    public String getRemoveFilter() {
-        return removeFilter;
-    }
-
-    public void setRemoveFilter(String removeFilter) {
-        this.removeFilter = removeFilter;
-    }
 
     // db.table -> topic
     private Map<String, String> tableToTopicRegexMap = new RegexHashMap<>();

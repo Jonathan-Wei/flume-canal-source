@@ -92,7 +92,7 @@ public class EntryConverter implements EntryConverterInterface {
             // only avro need schema name;
             splitTableToTopicMap(canalConf.getTableToTopicMap());
         }
-        splitRemoveFilter(canalConf.getRemoveFilter());
+        splitTableFieldsFilter(canalConf.getTableFieldsFilter());
 
         BiFunction<String, String, Boolean> removeColumnFilterFun = removeFilterTable::contains;
         Function<String, Boolean> removeRowFilterFunc = (tableKey) ->
@@ -159,8 +159,8 @@ public class EntryConverter implements EntryConverterInterface {
     /*
      * 对库，表和字段排除进行解析
      * */
-    private void splitRemoveFilter(String removeFilter) {
-        if (Strings.isNullOrEmpty(removeFilter)) {
+    private void splitTableFieldsFilter(String tableFieldsFilter) {
+        if (Strings.isNullOrEmpty(tableFieldsFilter)) {
             return;
         }
 
@@ -168,12 +168,12 @@ public class EntryConverter implements EntryConverterInterface {
         Splitter.on(';')
             .omitEmptyStrings()
             .trimResults()
-            .split(removeFilter)
+            .split(tableFieldsFilter)
             .forEach(item -> {
                 if (item.contains(":")) { // 字段过滤
                     String[] result = item.split(":");
                     Preconditions.checkArgument(result.length == 2,
-                        "removeFilter format incorrect eg: db.tbl1:id,name");
+                        "tableFieldsFilter format incorrect eg: test1\\..*;test.test1;db.tbl1:id,name");
                     String table = result[0].trim();
                     String fields = result[1].trim();
 
