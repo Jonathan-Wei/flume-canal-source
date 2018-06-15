@@ -8,9 +8,12 @@ import static com.citic.source.canal.CanalSourceConstants.META_DATA;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_FROM;
 import static com.citic.source.canal.CanalSourceConstants.META_TRANS_ID;
+import static com.citic.source.canal.CanalSourceConstants.SUPPORT_TIME_FORMAT;
 import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.AgentCounter;
+import com.citic.helper.FlowCounter;
 import com.citic.helper.SchemaCache;
 import com.citic.source.canal.AbstractEntrySqlHandler.Avro;
 import com.citic.source.canal.CanalConf;
@@ -29,7 +32,9 @@ import com.twitter.bijection.Injection;
 import com.twitter.bijection.avro.GenericAvroCodecs;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -52,6 +57,8 @@ public class EntryConverter implements EntryConverterInterface {
     private static final Type LIST_TOKEN_TYPE = new TypeToken<List<Map<String, String>>>() {
     }.getType();
     private static final String NOT_SET_FIELD = "__notSet";
+
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
 
     private final EntrySqlHandlerInterface sqlHandler;
     private final TransDataHandlerInterface dataHandler;
@@ -107,7 +114,8 @@ public class EntryConverter implements EntryConverterInterface {
     /*
      * 处理行数据，并添加其他字段信息
      * */
-    private Map<String, Object> handleRowData(List<Map<String, String>> transDataList, String transId) {
+    private Map<String, Object> handleRowData(List<Map<String, String>> transDataList,
+        String transId) {
         Map<String, Object> eventMap = Maps.newHashMap();
 
         if (this.userAvro) {
@@ -210,7 +218,7 @@ public class EntryConverter implements EntryConverterInterface {
     }
 
 
-    private Event transDataToEvent() {
+    private Event transDataToEvent(CanalEntry.Header tansEndHeader) {
         // 处理行数据
         Map<String, Object> eventData = handleRowData(this.transDataList, this.transId);
 
@@ -220,11 +228,22 @@ public class EntryConverter implements EntryConverterInterface {
 
         Map<String, String> header = handleRowDataHeader(topic);
 
+        if (!canalConf.isShutdownFlowCounter()) {
+            doDataCount(topic, tansEndHeader);
+        }
+
         if (this.userAvro) {
             return dataToEvent(eventData, header, topic);
         } else {
             return jsonDataToEvent(eventData, header);
         }
+    }
+
+    private void doDataCount(String topic, CanalEntry.Header entryHeader) {
+        String timeFieldValue = dateFormat.format(new Date(entryHeader.getExecuteTime()));
+        // 事务封装不能确定单个表，因此传入空值
+        FlowCounter.increment(topic, "", canalConf.getFromDbIp(), timeFieldValue);
+        AgentCounter.increment(canalConf.getAgentIpAddress());
     }
 
     @Override
@@ -246,7 +265,7 @@ public class EntryConverter implements EntryConverterInterface {
             this.transId = end.getTransactionId();
 
             if (this.transDataList.size() > 0) {
-                Event transEvent = transDataToEvent();
+                Event transEvent = transDataToEvent(entry.getHeader());
                 events.add(transEvent);
                 this.transDataList.clear();
             }

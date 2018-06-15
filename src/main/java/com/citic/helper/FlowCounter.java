@@ -132,6 +132,7 @@ public class FlowCounter {
     }
 
     private static long incrementByKey(CounterKey key) {
+        LOGGER.debug("FlowCounter, key: {}", key.toString());
         return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
