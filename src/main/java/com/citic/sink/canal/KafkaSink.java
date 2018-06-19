@@ -314,6 +314,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         producer.close();
         counter.stop();
+
+        // 清除 schema Cache
+        SchemaCache.clearSchemaCache();
+
         LOGGER.info("Kafka Sink {} stopped. Metrics: {}", getName(), counter);
         super.stop();
     }

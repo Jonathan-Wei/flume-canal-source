@@ -115,7 +115,8 @@ public class Utility {
      * @param header the header
      * @param counterKey the counter key
      */
-    public static void putFlowCounterKeyToHeader(Map<String, String> header, FlowCounterKey counterKey) {
+    public static void putFlowCounterKeyToHeader(Map<String, String> header,
+        FlowCounterKey counterKey) {
         if (counterKey != null) {
             header.put(FLOW_COUNTER_TOPIC, counterKey.getTopic());
             header.put(FLOW_COUNTER_TABLE, counterKey.getTable());

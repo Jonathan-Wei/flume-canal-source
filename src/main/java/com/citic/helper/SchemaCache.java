@@ -81,6 +81,14 @@ public class SchemaCache {
         return schemaCache.get(schemaName);
     }
 
+
+    /**
+     * Clear schema cache.
+     */
+    public static void clearSchemaCache() {
+        schemaCache.clear();
+    }
+
     /**
      * The entry point of application.
      *
