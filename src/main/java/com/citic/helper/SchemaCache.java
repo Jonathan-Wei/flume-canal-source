@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
  */
 public class SchemaCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaCache.class);
-
-    private static final Schema.Parser parser = new Schema.Parser();
     private static final Map<String, Schema> schemaCache = Maps.newConcurrentMap();
 
     private static String getTableFieldSchema(Iterable<String> schemaFieldList, String schemaName) {
@@ -49,6 +47,7 @@ public class SchemaCache {
     public static Schema getSchema(Iterable<String> schemaFieldList, String schemaName) {
         return schemaCache.computeIfAbsent(schemaName, key -> {
             String schemaString = getTableFieldSchema(schemaFieldList, schemaName);
+            Schema.Parser parser = new Schema.Parser();
             return parser.parse(schemaString);
         });
     }
@@ -66,7 +65,7 @@ public class SchemaCache {
         return schemaCache.computeIfAbsent(schemaName, key -> {
             String schemaString = getTableFieldSchema(Iterables.unmodifiableIterable(
                 Iterables.concat(schemaFieldList, attrList)), schemaName);
-
+            Schema.Parser parser = new Schema.Parser();
             return parser.parse(schemaString);
         });
     }
