@@ -39,6 +39,7 @@ public class CanalSourceConstants {
     public static final String META_FIELD_FROM = "__from";
     public static final String META_FIELD_SQL = "__sql";
     public static final String META_TRANS_ID = "__transId";
+    public static final String META_SPLIT_ID = "__splitId";
     public static final String META_DATA = "data";
 
     public static final String SUPPORT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";

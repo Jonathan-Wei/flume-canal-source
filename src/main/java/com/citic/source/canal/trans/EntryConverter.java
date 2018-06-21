@@ -7,6 +7,7 @@ import static com.citic.source.canal.CanalSourceConstants.GSON;
 import static com.citic.source.canal.CanalSourceConstants.META_DATA;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_AGENT;
 import static com.citic.source.canal.CanalSourceConstants.META_FIELD_FROM;
+import static com.citic.source.canal.CanalSourceConstants.META_SPLIT_ID;
 import static com.citic.source.canal.CanalSourceConstants.META_TRANS_ID;
 import static com.citic.source.canal.CanalSourceConstants.SUPPORT_TIME_FORMAT;
 import static com.citic.source.canal.CanalSourceConstants.TOKEN_TYPE;
@@ -60,6 +61,7 @@ public class EntryConverter implements EntryConverterInterface {
     private static final Type LIST_TOKEN_TYPE = new TypeToken<List<Map<String, String>>>() {
     }.getType();
     private static final String NOT_SET_FIELD = "__notSet";
+    private static final int MAX_SPLIT_ROW_NUM = 10;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
 
@@ -73,7 +75,8 @@ public class EntryConverter implements EntryConverterInterface {
     private final Map<String, String> topicToSchemaMap = Maps.newHashMap();
     private final RegexHashBasedTable<String, Boolean> removeFilterTable = RegexHashBasedTable
         .create();
-    private String transId = null;
+    private String transId = "first_start_unknown_trans_id";
+    private int splitId = 0;
 
     private final List<String> attrList;
 
@@ -89,7 +92,8 @@ public class EntryConverter implements EntryConverterInterface {
         this.transDataList = Lists.newArrayList();
 
         this.attrList = Lists
-            .newArrayList(META_DATA, META_TRANS_ID, META_FIELD_AGENT, META_FIELD_FROM);
+            .newArrayList(META_DATA, META_TRANS_ID, META_SPLIT_ID, META_FIELD_AGENT,
+                META_FIELD_FROM);
 
         if (this.userAvro) {
             // only avro need schema name;
@@ -118,7 +122,7 @@ public class EntryConverter implements EntryConverterInterface {
      * 处理行数据，并添加其他字段信息
      * */
     private Map<String, Object> handleRowData(List<Map<String, String>> transDataList,
-        String transId) {
+        String transId, int splitId) {
         Map<String, Object> eventMap = Maps.newHashMap();
 
         if (this.userAvro) {
@@ -129,6 +133,7 @@ public class EntryConverter implements EntryConverterInterface {
         }
 
         eventMap.put(META_TRANS_ID, transId == null ? "" : transId);
+        eventMap.put(META_SPLIT_ID, splitId);
         eventMap.put(META_FIELD_AGENT, canalConf.getAgentIpAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDbIp());
         return eventMap;
@@ -224,7 +229,8 @@ public class EntryConverter implements EntryConverterInterface {
 
     private Event transDataToEvent(CanalEntry.Header tansEndHeader) {
         // 处理行数据
-        Map<String, Object> eventData = handleRowData(this.transDataList, this.transId);
+        Map<String, Object> eventData = handleRowData(this.transDataList, this.transId,
+            this.splitId);
 
         // 全局事务封装只能配置全库全表, 获取第一个 topic
         String allTables = canalConf.getFilterTableList().get(0);
@@ -271,14 +277,17 @@ public class EntryConverter implements EntryConverterInterface {
                     "parse event has an error , data:" + entry.toString(), e);
             }
 
-            this.transId = end.getTransactionId();
-
             if (this.transDataList.size() > 0) {
                 Event transEvent = transDataToEvent(entry.getHeader());
                 events.add(transEvent);
                 this.transDataList.clear();
             }
-            LOGGER.debug("TRANSACTIONEND transId:{}", end.getTransactionId());
+
+            // 用上个事务的id作为数据的事务id，只要能确定唯一就ok
+            this.transId = end.getTransactionId();
+            this.splitId = 0;
+
+            LOGGER.debug("TRANSACTIONEND transId:{}", this.transId);
         } else if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
             CanalEntry.RowChange rowChange;
             try {
@@ -304,6 +313,15 @@ public class EntryConverter implements EntryConverterInterface {
                     if (dataMap != null) {
                         transDataList.add(dataMap);
                     }
+
+                    // 对大事务进行拆分
+                    if (this.transDataList.size() >= MAX_SPLIT_ROW_NUM) {
+                        Event transEvent = transDataToEvent(entry.getHeader());
+                        events.add(transEvent);
+                        this.transDataList.clear();
+                        this.splitId += 1;
+                    }
+
                 }
             }
         }
