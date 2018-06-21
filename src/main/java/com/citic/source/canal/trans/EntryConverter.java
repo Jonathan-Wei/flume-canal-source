@@ -133,7 +133,7 @@ public class EntryConverter implements EntryConverterInterface {
         }
 
         eventMap.put(META_TRANS_ID, transId == null ? "" : transId);
-        eventMap.put(META_SPLIT_ID, splitId);
+        eventMap.put(META_SPLIT_ID, String.valueOf(splitId));
         eventMap.put(META_FIELD_AGENT, canalConf.getAgentIpAddress());
         eventMap.put(META_FIELD_FROM, canalConf.getFromDbIp());
         return eventMap;
