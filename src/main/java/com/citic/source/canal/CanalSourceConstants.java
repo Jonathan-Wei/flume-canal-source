@@ -22,6 +22,9 @@ public class CanalSourceConstants {
     public static final String TABLE_TO_TOPIC_MAP = "tableToTopicMap";
     public static final String TABLE_FIELDS_FILTER = "tableFieldsFilter";
 
+    public static final String TRANS_MAX_SPLIT_ROW_NUM = "transMaxSplitRowNum";
+    public static final int DEFAULT_TRANS_MAX_SPLIT_ROW_NUM = 128;
+
 
     public static final String USE_AVRO = "useAvro";
     public static final String SHUTDOWN_FLOW_COUNTER = "shutdownFlowCounter";

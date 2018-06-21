@@ -37,6 +37,9 @@ public class CanalConf {
     private String tableToTopicMap;
     private String tableFieldsFilter;
 
+    // 事务最大拆分行数
+    private int transMaxSplitRowNum;
+
     // db.table -> topic
     private Map<String, String> tableToTopicRegexMap = new RegexHashMap<>();
     private List<String> filterTableList = Lists.newArrayList();
@@ -89,6 +92,24 @@ public class CanalConf {
                 String.format("The serverUrl is malformed . The ServerUrl : \"%s\" .",
                     serverUrl));
         }
+    }
+
+    /**
+     * Gets trans max split row num.
+     *
+     * @return the trans max split row num
+     */
+    public int getTransMaxSplitRowNum() {
+        return transMaxSplitRowNum;
+    }
+
+    /**
+     * Sets trans max split row num.
+     *
+     * @param transMaxSplitRowNum the trans max split row num
+     */
+    public void setTransMaxSplitRowNum(int transMaxSplitRowNum) {
+        this.transMaxSplitRowNum = transMaxSplitRowNum;
     }
 
     /**

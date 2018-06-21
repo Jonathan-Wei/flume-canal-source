@@ -61,7 +61,6 @@ public class EntryConverter implements EntryConverterInterface {
     private static final Type LIST_TOKEN_TYPE = new TypeToken<List<Map<String, String>>>() {
     }.getType();
     private static final String NOT_SET_FIELD = "__notSet";
-    private static final int MAX_SPLIT_ROW_NUM = 10;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
 
@@ -315,7 +314,7 @@ public class EntryConverter implements EntryConverterInterface {
                     }
 
                     // 对大事务进行拆分
-                    if (this.transDataList.size() >= MAX_SPLIT_ROW_NUM) {
+                    if (this.transDataList.size() >= this.canalConf.getTransMaxSplitRowNum()) {
                         Event transEvent = transDataToEvent(entry.getHeader());
                         events.add(transEvent);
                         this.transDataList.clear();

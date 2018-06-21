@@ -4,6 +4,7 @@ import static com.citic.source.canal.CanalSourceConstants.BATCH_SIZE;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_BATCH_SIZE;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_PSWD;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_SHUTDOWN_FLOW_COUNTER;
+import static com.citic.source.canal.CanalSourceConstants.DEFAULT_TRANS_MAX_SPLIT_ROW_NUM;
 import static com.citic.source.canal.CanalSourceConstants.DEFAULT_USERNAME;
 import static com.citic.source.canal.CanalSourceConstants.DESTINATION;
 import static com.citic.source.canal.CanalSourceConstants.IP_INTERFACE;
@@ -14,6 +15,7 @@ import static com.citic.source.canal.CanalSourceConstants.SERVER_URLS;
 import static com.citic.source.canal.CanalSourceConstants.SHUTDOWN_FLOW_COUNTER;
 import static com.citic.source.canal.CanalSourceConstants.TABLE_FIELDS_FILTER;
 import static com.citic.source.canal.CanalSourceConstants.TABLE_TO_TOPIC_MAP;
+import static com.citic.source.canal.CanalSourceConstants.TRANS_MAX_SPLIT_ROW_NUM;
 import static com.citic.source.canal.CanalSourceConstants.USERNAME;
 import static com.citic.source.canal.CanalSourceConstants.USE_AVRO;
 import static com.citic.source.canal.CanalSourceConstants.ZOOKEEPER_SERVERS;
@@ -59,6 +61,9 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
         canalConf.setBatchSize(context.getInteger(BATCH_SIZE, DEFAULT_BATCH_SIZE));
         canalConf.setTableToTopicMap(context.getString(TABLE_TO_TOPIC_MAP));
         canalConf.setTableFieldsFilter(context.getString(TABLE_FIELDS_FILTER));
+
+        canalConf.setTransMaxSplitRowNum(
+            context.getInteger(TRANS_MAX_SPLIT_ROW_NUM, DEFAULT_TRANS_MAX_SPLIT_ROW_NUM));
 
         canalConf.setShutdownFlowCounter(
             context.getBoolean(SHUTDOWN_FLOW_COUNTER, DEFAULT_SHUTDOWN_FLOW_COUNTER));
