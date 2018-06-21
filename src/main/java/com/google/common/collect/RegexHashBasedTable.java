@@ -77,43 +77,6 @@ public class RegexHashBasedTable<C, V> extends StandardTable<String, C, V> {
         super(backingMap, factory);
     }
 
-    // Overriding so NullPointerTester test passes.
-
-    @Override
-    public boolean contains(Object rowKey, Object columnKey) {
-        return super.contains(rowKey, columnKey);
-    }
-
-    @Override
-    public boolean containsColumn(Object columnKey) {
-        return super.containsColumn(columnKey);
-    }
-
-    @Override
-    public boolean containsRow(Object rowKey) {
-        return super.containsRow(rowKey);
-    }
-
-    @Override
-    public boolean containsValue(Object value) {
-        return super.containsValue(value);
-    }
-
-    @Override
-    public V get(Object rowKey, Object columnKey) {
-        return super.get(rowKey, columnKey);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return super.equals(obj);
-    }
-
-    @Override
-    public V remove(Object rowKey, Object columnKey) {
-        return super.remove(rowKey, columnKey);
-    }
-
     private static final long serialVersionUID = 0;
 
     /**
@@ -126,14 +89,5 @@ public class RegexHashBasedTable<C, V> extends StandardTable<String, C, V> {
 
         rh.put("test\\.test.*", "id", "11212");
         rh.put("test\\.test.*", "name", "zhoupeng");
-        System.out.println(rh);
-
-        System.out.println(rh.containsRow("test.test1"));
-        System.out.println(rh.containsColumn("id"));
-        System.out.println(rh.containsColumn("name"));
-        System.out.println(rh.containsColumn("age"));
-        System.out.println(rh.get("test.test1", "id"));
-        System.out.println(rh.get("test.test1", "name"));
-        System.out.println(rh.get("test.test1", "age"));
     }
 }

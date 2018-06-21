@@ -29,13 +29,7 @@ public class RegexHashMap<V> implements Map<String, V> {
     /**
      * Compiled patterns.
      */
-    private final List<PatternMatcher> matchers = new ArrayList<PatternMatcher>();
-
-    /**
-     * Instantiates a new Regex hash map.
-     */
-    public RegexHashMap() {
-    }
+    private final List<PatternMatcher> matchers = new ArrayList<>();
 
     /**
      * The entry point of application.
@@ -48,17 +42,8 @@ public class RegexHashMap<V> implements Map<String, V> {
         temp.put("account", "This is a direct match");
         temp.put("test\\.test.*", "test db test starts tables");
 
-        RegexHashMap<String> rh = new RegexHashMap<String>();
+        RegexHashMap<String> rh = new RegexHashMap<>();
         rh.putAll(temp);
-        System.out.println(rh);
-        System.out.println("get:ose-1 -> " + rh.get("ose-1"));
-        System.out.println("get:OSE2 -> " + rh.get("OSE2"));
-        System.out.println("get:OSE112 -> " + rh.get("OSE112"));
-        System.out.println("get:ose-2 -> " + rh.get("ose-2"));
-        System.out.println("get:account -> " + rh.get("account"));
-        System.out.println("get:test.test2 -> " + rh.get("test.test2"));
-        System.out.println("get:test\\.test.* -> " + rh.get("test\\.test.*"));
-        System.out.println(rh);
 
     }
 
