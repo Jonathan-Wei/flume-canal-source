@@ -79,4 +79,8 @@ public class KafkaSinkConstants {
     public static final String ALERT_SCHEMA_NAME = "alter_info";
     public static final String ALERT_TOPIC = "avro_error_alert";
 
+    private KafkaSinkConstants() {
+        throw new IllegalStateException("Utility class");
+    }
+
 }

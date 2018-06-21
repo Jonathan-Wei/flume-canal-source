@@ -39,6 +39,9 @@ public class AgentCounter {
     private static final List<String> ATTR_LIST = Lists
         .newArrayList(COUNT_AGENT, COUNT_PERIOD, COUNT);
 
+    private AgentCounter() {
+        throw new IllegalStateException("Utility class");
+    }
 
     private static final Map<AgentCounterKey, AtomicLong> CACHE_COUNTER = ExpiringMap.builder()
         .maxSize(10000)
@@ -126,12 +129,12 @@ public class AgentCounter {
     }
 
     public static long incrementErrorByKey(AgentCounterKey key) {
-        LOGGER.debug("AgentErrorCounter, key: {}", key.toString());
+        LOGGER.debug("AgentErrorCounter, key: {}", key);
         return CACHE_ERROR_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
     private static long incrementByKey(AgentCounterKey key) {
-        LOGGER.debug("AgentCounter, key: {}", key.toString());
+        LOGGER.debug("AgentCounter, key: {}", key);
         return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 

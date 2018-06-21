@@ -43,6 +43,10 @@ public class Utility {
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
     private static final String DEFAULT_IP = "127.0.0.1";
 
+    private Utility() {
+        throw new IllegalStateException("Utility class");
+    }
+
     /**
      * Gets local ip.
      *
@@ -84,11 +88,9 @@ public class Utility {
      */
     public static String avroToJson(GenericRecord avroRecord) {
         JsonEncoder encoder;
-        ByteArrayOutputStream output = null;
-        try {
-            output = new ByteArrayOutputStream();
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             Schema schema = avroRecord.getSchema();
-            DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+            DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(schema);
             encoder = EncoderFactory.get().jsonEncoder(schema, output);
             writer.write(avroRecord, encoder);
             encoder.flush();
@@ -97,14 +99,6 @@ public class Utility {
         } catch (IOException e) {
             LOGGER.error("avroToJson error, avroRecord: {}", avroRecord, e);
             return "invalid avro record";
-        } finally {
-            try {
-                if (output != null) {
-                    output.close();
-                }
-            } catch (Exception e) {
-                LOGGER.error(e.getMessage(), e);
-            }
         }
     }
 
@@ -146,6 +140,10 @@ public class Utility {
 
         private static final String TIME_MINUTE_FORMAT = "yyyy-MM-dd HH:mm";
         private static final ThreadLocal<Calendar> threadLocalCanendar = new ThreadLocal<>();
+
+        private Minutes5() {
+            throw new IllegalStateException("Utility class");
+        }
 
         private static final LoadingCache<Date, String> formatCache = CacheBuilder
             .newBuilder()

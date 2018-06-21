@@ -9,7 +9,8 @@ import java.util.Map;
 public class CanalSourceConstants {
 
     public static final Gson GSON = new Gson();
-    public static final Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {}.getType();
+    public static final Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {
+    }.getType();
     public static final DecimalFormat DECIMAL_FORMAT_3 = new DecimalFormat(".000");
     public static final String IP_INTERFACE = "ipInterface";
     public static final String ZOOKEEPER_SERVERS = "zkServers";
@@ -46,4 +47,8 @@ public class CanalSourceConstants {
     public static final String META_DATA = "data";
 
     public static final String SUPPORT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+
+    private CanalSourceConstants() {
+        throw new IllegalStateException("Utility class");
+    }
 }

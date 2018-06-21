@@ -162,7 +162,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
                     break;
                 }
 
-                Object eventBody = event.getBody();
                 Map<String, String> headers = event.getHeaders();
 
                 if (allowTopicOverride) {
@@ -180,7 +179,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
                 eventKey = headers.get(KEY_HEADER);
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("{Event} " + eventTopic + " : " + eventKey);
+                    LOGGER.trace("{Event} {} : {} ", eventTopic, eventKey);
                 }
                 LOGGER.debug("event #{}", processedEvents);
 
@@ -302,8 +301,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     public synchronized void stop() {
         // 发送完channel中的数据再停止
         try {
-            while (this.process() == Status.READY) {
-            }
+            while (this.process() == Status.READY);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         }
@@ -367,7 +365,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
             .getInteger(COUNT_MONITOR_INTERVAL, DEFAULT_COUNT_MONITOR_INTERVAL);
 
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(KafkaSinkConstants.AVRO_EVENT + " set to: {}", useAvroEventFormat);
+            LOGGER.debug("{} set to: {}", KafkaSinkConstants.AVRO_EVENT, useAvroEventFormat);
         }
 
         kafkaFutures = new LinkedList<>();
@@ -427,7 +425,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         if (!(ctx.containsKey(KAFKA_PRODUCER_PREFIX + ProducerConfig.ACKS_CONFIG))) {
             String requiredKey = ctx.getString(
                 KafkaSinkConstants.REQUIRED_ACKS_FLUME_KEY);
-            if (!(requiredKey == null) && !(requiredKey.isEmpty())) {
+            if ((requiredKey != null) && !(requiredKey.isEmpty())) {
                 ctx.put(KAFKA_PRODUCER_PREFIX + ProducerConfig.ACKS_CONFIG, requiredKey);
                 LOGGER
                     .warn("{} is deprecated. Please use the parameter {}", REQUIRED_ACKS_FLUME_KEY,
@@ -489,7 +487,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
     }
 
 
-    private byte[] serializeJsonEvent(Event event) throws IOException {
+    private byte[] serializeJsonEvent(Event event) {
         return event.getBody();
     }
 

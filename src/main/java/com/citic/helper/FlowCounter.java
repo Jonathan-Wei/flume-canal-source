@@ -58,6 +58,10 @@ public class FlowCounter {
         .expirationPolicy(ExpirationPolicy.CREATED)
         .build();
 
+    private FlowCounter() {
+        throw new IllegalStateException("Utility class");
+    }
+
     /**
      * Flow counter to events list.
      *
@@ -128,7 +132,7 @@ public class FlowCounter {
      * @return the long
      */
     public static long incrementErrorByKey(FlowCounterKey key) {
-        LOGGER.debug("FlowErrorCounter, key: {}", key.toString());
+        LOGGER.debug("FlowErrorCounter, key: {}", key);
         return ERROR_CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 
@@ -165,7 +169,7 @@ public class FlowCounter {
     }
 
     private static long incrementByKey(FlowCounterKey key) {
-        LOGGER.debug("FlowCounter, key: {}", key.toString());
+        LOGGER.debug("FlowCounter, key: {}", key);
         return CACHE_COUNTER.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();
     }
 

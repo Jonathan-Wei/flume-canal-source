@@ -95,7 +95,6 @@ public class EntryConverter implements EntryConverterInterface {
                 META_FIELD_FROM);
 
         if (this.userAvro) {
-            // only avro need schema name;
             splitTableToTopicMap(canalConf.getTableToTopicMap());
         }
         splitTableFieldsFilter(canalConf.getTableFieldsFilter());

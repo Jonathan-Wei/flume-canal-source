@@ -26,7 +26,6 @@ public class DataHandler extends AbstractCommonDataHandler implements
     TransDataHandlerInterface {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataHandler.class);
-    private final CanalConf canalConf;
 
     private final BiFunction<String, String, Boolean> removeColumnFilterFun;
     private final Function<String, Boolean> removeRowFilterFun;
@@ -42,7 +41,6 @@ public class DataHandler extends AbstractCommonDataHandler implements
         Function<String, Boolean> removeRowFilterFun,
         BiFunction<String, String, Boolean> removeColumnFilterFun) {
 
-        this.canalConf = canalConf;
         this.removeRowFilterFun = removeRowFilterFun;
         this.removeColumnFilterFun = removeColumnFilterFun;
     }

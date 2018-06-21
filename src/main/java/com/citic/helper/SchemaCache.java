@@ -6,15 +6,13 @@ import com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
 import org.apache.avro.Schema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created by zhoupeng on 2018/4/19.
  */
 public class SchemaCache {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SchemaCache.class);
-    private static final Map<String, Schema> schemaCache = Maps.newConcurrentMap();
+
+    private static final Map<String, Schema> localCache = Maps.newConcurrentMap();
 
     private static String getTableFieldSchema(Iterable<String> schemaFieldList, String schemaName) {
         StringBuilder builder = new StringBuilder();
@@ -45,7 +43,7 @@ public class SchemaCache {
      * @return the schema
      */
     public static Schema getSchema(Iterable<String> schemaFieldList, String schemaName) {
-        return schemaCache.computeIfAbsent(schemaName, key -> {
+        return localCache.computeIfAbsent(schemaName, key -> {
             String schemaString = getTableFieldSchema(schemaFieldList, schemaName);
             Schema.Parser parser = new Schema.Parser();
             return parser.parse(schemaString);
@@ -62,7 +60,7 @@ public class SchemaCache {
      */
     public static Schema getSchema2(Iterable<String> schemaFieldList, Iterable<String> attrList,
         String schemaName) {
-        return schemaCache.computeIfAbsent(schemaName, key -> {
+        return localCache.computeIfAbsent(schemaName, key -> {
             String schemaString = getTableFieldSchema(Iterables.unmodifiableIterable(
                 Iterables.concat(schemaFieldList, attrList)), schemaName);
             Schema.Parser parser = new Schema.Parser();
@@ -77,7 +75,7 @@ public class SchemaCache {
      * @return the schema sink
      */
     public static Schema getSchemaSink(String schemaName) {
-        return schemaCache.get(schemaName);
+        return localCache.get(schemaName);
     }
 
 
@@ -85,7 +83,7 @@ public class SchemaCache {
      * Clear schema cache.
      */
     public static void clearSchemaCache() {
-        schemaCache.clear();
+        localCache.clear();
     }
 
     /**

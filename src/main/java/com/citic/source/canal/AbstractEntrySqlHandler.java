@@ -126,7 +126,7 @@ public abstract class AbstractEntrySqlHandler implements EntrySqlHandlerInterfac
 
         private static final Gson GSON = new Gson();
         private static final String AVRO_SQL_TOPIC = "json_ddl_sql";
-        private static Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {
+        private static final Type TOKEN_TYPE = new TypeToken<Map<String, Object>>() {
         }.getType();
 
         /**

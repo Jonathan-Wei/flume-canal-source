@@ -70,7 +70,7 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
     }
 
     @Override
-    protected void doConfigure(Context context) throws FlumeException {
+    protected void doConfigure(Context context) {
         LOGGER.debug("configure...");
         // 判断序列话格式
         canalConf = new CanalConf();
@@ -99,7 +99,7 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
     }
 
     @Override
-    protected void doStart() throws FlumeException {
+    protected void doStart() {
         LOGGER.debug("start...");
         try {
             this.canalClient = new CanalClient(canalConf);
@@ -148,7 +148,6 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
         } catch (Exception e) {
             errorContinueCounter++;
             if (errorContinueCounter > 3) {
-                //TODO: 考虑动态增加 batch size
                 int reduceBatchSize = Math.max(canalConf.getBatchSize() - 96, MIN_BATCH_SIZE);
                 canalConf.setBatchSize(reduceBatchSize);
             }
@@ -173,11 +172,11 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
 
 
     @Override
-    protected void doStop() throws FlumeException {
+    protected void doStop() {
         LOGGER.debug("stop...");
         this.canalClient.stop();
         sourceCounter.stop();
 
-        LOGGER.info("" + "CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
+        LOGGER.info("CanalSource source {} stopped. Metrics: {}", getName(), sourceCounter);
     }
 }

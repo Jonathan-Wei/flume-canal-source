@@ -13,15 +13,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The type Canal conf.
  */
 public class CanalConf {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CanalConf.class);
     private String agentIpAddress;
     private String zkServers;
     private String destination;
@@ -51,8 +48,7 @@ public class CanalConf {
      * @return the list
      * @throws IllegalArgumentException the illegal argument exception
      */
-    static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) throws
-        IllegalArgumentException {
+    static List<SocketAddress> convertUrlsToSocketAddressList(String serverUrls) {
         List<SocketAddress> addresses = new ArrayList<>();
         if (StringUtils.isNotEmpty(serverUrls)) {
             for (String serverUrl : serverUrls.split(",")) {
@@ -80,9 +76,7 @@ public class CanalConf {
      * @throws IllegalArgumentException the illegal argument exception
      * @throws NumberFormatException the number format exception
      */
-    static SocketAddress convertUrlToSocketAddress(String serverUrl)
-        throws IllegalArgumentException,
-        NumberFormatException {
+    static SocketAddress convertUrlToSocketAddress(String serverUrl) {
         String[] hostAndPort = serverUrl.split(":");
         if (hostAndPort.length == 2 && StringUtils.isNotEmpty(hostAndPort[1])) {
             int port = Integer.parseInt(hostAndPort[1]);

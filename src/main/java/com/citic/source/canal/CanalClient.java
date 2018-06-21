@@ -43,21 +43,19 @@ public class CanalClient {
      * @param canalConf the canal conf
      * @throws IllegalArgumentException the illegal argument exception
      */
-    public CanalClient(CanalConf canalConf) throws IllegalArgumentException {
+    public CanalClient(CanalConf canalConf) {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
             this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),
                 canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace(String.format(
-                "Cluster connector has been created. Zookeeper servers are %s, destination is %s",
-                canalConf.getZkServers(), canalConf.getDestination()));
+            LOGGER.trace("Cluster connector has been created. Zookeeper servers are {}, destination is {}",
+                canalConf.getZkServers(), canalConf.getDestination());
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrls())) {
             this.canalConnector = getConnector(
                 CanalConf.convertUrlsToSocketAddressList(canalConf.getServerUrls()),
                 canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace(String
-                .format("Cluster connector has been created. Server urls are %s, destination is %s",
-                    canalConf.getServerUrls(), canalConf.getDestination()));
+            LOGGER.trace("Cluster connector has been created. Server urls are {}, destination is {}",
+                    canalConf.getServerUrls(), canalConf.getDestination());
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrl())) {
             this.canalConnector = getConnector(
                 CanalConf.convertUrlToSocketAddress(canalConf.getServerUrl()),
