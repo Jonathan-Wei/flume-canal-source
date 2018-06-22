@@ -100,7 +100,7 @@ public class EntryConverter implements EntryConverterInterface {
         splitTableFieldsFilter(canalConf.getTableFieldsFilter());
 
         BiFunction<String, String, Boolean> removeColumnFilterFun = removeFilterTable::contains;
-        Function<String, Boolean> removeRowFilterFunc = (tableKey) ->
+        Function<String, Boolean> removeRowFilterFunc = tableKey ->
             removeFilterTable.contains(tableKey, NOT_SET_FIELD);
 
         this.dataHandler = new DataHandler(canalConf, removeRowFilterFunc,
@@ -259,69 +259,78 @@ public class EntryConverter implements EntryConverterInterface {
         Utility.putAgentCounterKeyToHeader(headerData, agentCounterKey);
     }
 
+
+    private void handleTransactionEnd(CanalEntry.Entry entry, List<Event> events) {
+        CanalEntry.TransactionEnd end;
+        try {
+            end = CanalEntry.TransactionEnd
+                .parseFrom(entry.getStoreValue());
+        } catch (InvalidProtocolBufferException e) {
+            LOGGER.error(
+                "parse transaction end event has an error , data:{}",  entry);
+            throw new RuntimeException(
+                "parse event has an error , data:" + entry.toString(), e);
+        }
+
+        if (!this.transDataList.isEmpty()) {
+            Event transEvent = transDataToEvent(entry.getHeader());
+            events.add(transEvent);
+            this.transDataList.clear();
+        }
+
+        // 用上个事务的id作为数据的事务id，只要能确定唯一就ok
+        this.transId = end.getTransactionId();
+        this.splitId = 0;
+
+        LOGGER.debug("TRANSACTIONEND transId:{}", this.transId);
+    }
+
+    private void handelRowData(CanalEntry.Entry entry, List<Event> events) {
+        CanalEntry.RowChange rowChange;
+        try {
+            rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
+        } catch (Exception e) {
+            LOGGER.warn("parse row data event has an error , data:" + entry.toString(), e);
+            throw new RuntimeException("parse event has an error , data:" + entry.toString(),
+                e);
+        }
+        CanalEntry.EventType eventType = rowChange.getEventType();
+        CanalEntry.Header eventHeader = entry.getHeader();
+
+        // canal 在 QUERY 事件没有做表过滤
+        if (eventType == CanalEntry.EventType.QUERY) {
+            // do nothing
+        } else if (rowChange.getIsDdl()) {
+            // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
+            events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
+        } else {
+            for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
+                Map<String, String> dataMap = this.dataHandler
+                    .getDataMap(rowData, eventHeader, eventType);
+                if (dataMap != null) {
+                    transDataList.add(dataMap);
+                }
+
+                // 对大事务进行拆分
+                if (this.transDataList.size() >= this.canalConf.getTransMaxSplitRowNum()) {
+                    Event transEvent = transDataToEvent(entry.getHeader());
+                    events.add(transEvent);
+                    this.transDataList.clear();
+                    this.splitId += 1;
+                }
+
+            }
+        }
+    }
+
     @Override
     public List<Event> convert(CanalEntry.Entry entry, CanalConf canalConf) {
         List<Event> events = new ArrayList<>();
         // 经过测试发现，EntryType.TRANSACTIONBEGIN 不会产生
         if (entry.getEntryType() == CanalEntry.EntryType.TRANSACTIONEND) {
-            CanalEntry.TransactionEnd end;
-            try {
-                end = CanalEntry.TransactionEnd
-                    .parseFrom(entry.getStoreValue());
-            } catch (InvalidProtocolBufferException e) {
-                LOGGER.error(
-                    "parse transaction end event has an error , data:" + entry.toString());
-                throw new RuntimeException(
-                    "parse event has an error , data:" + entry.toString(), e);
-            }
-
-            if (this.transDataList.size() > 0) {
-                Event transEvent = transDataToEvent(entry.getHeader());
-                events.add(transEvent);
-                this.transDataList.clear();
-            }
-
-            // 用上个事务的id作为数据的事务id，只要能确定唯一就ok
-            this.transId = end.getTransactionId();
-            this.splitId = 0;
-
-            LOGGER.debug("TRANSACTIONEND transId:{}", this.transId);
+            handleTransactionEnd(entry, events);
         } else if (entry.getEntryType() == CanalEntry.EntryType.ROWDATA) {
-            CanalEntry.RowChange rowChange;
-            try {
-                rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
-            } catch (Exception e) {
-                LOGGER.warn("parse row data event has an error , data:" + entry.toString(), e);
-                throw new RuntimeException("parse event has an error , data:" + entry.toString(),
-                    e);
-            }
-            CanalEntry.EventType eventType = rowChange.getEventType();
-            CanalEntry.Header eventHeader = entry.getHeader();
-
-            // canal 在 QUERY 事件没有做表过滤
-            if (eventType == CanalEntry.EventType.QUERY) {
-                // do nothing
-            } else if (rowChange.getIsDdl()) {
-                // 只有 ddl 操作才记录 sql, 其他 insert update delete 不做sql记录操作
-                events.add(this.sqlHandler.getSqlEvent(eventHeader, rowChange.getSql(), canalConf));
-            } else {
-                for (CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
-                    Map<String, String> dataMap = this.dataHandler
-                        .getDataMap(rowData, eventHeader, eventType);
-                    if (dataMap != null) {
-                        transDataList.add(dataMap);
-                    }
-
-                    // 对大事务进行拆分
-                    if (this.transDataList.size() >= this.canalConf.getTransMaxSplitRowNum()) {
-                        Event transEvent = transDataToEvent(entry.getHeader());
-                        events.add(transEvent);
-                        this.transDataList.clear();
-                        this.splitId += 1;
-                    }
-
-                }
-            }
+            handelRowData(entry, events);
         }
         return events;
     }

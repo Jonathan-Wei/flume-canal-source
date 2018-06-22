@@ -32,6 +32,7 @@ import static com.citic.sink.canal.KafkaSinkConstants.REQUIRED_ACKS_FLUME_KEY;
 import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_NAME;
 import static com.citic.sink.canal.KafkaSinkConstants.SCHEMA_REGISTRY_URL_NAME;
 import static com.citic.sink.canal.KafkaSinkConstants.SEND_ERROR_FILE_DEFAULT;
+import static com.citic.sink.canal.KafkaSinkConstants.STRING_TOPIC;
 import static com.citic.sink.canal.KafkaSinkConstants.TOPIC_CONFIG;
 
 import com.citic.helper.AgentCounter;
@@ -138,8 +139,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
         Channel channel = getChannel();
         Transaction transaction = null;
         Event event = null;
-        String eventTopic = null;
-        String eventKey = null;
 
         try {
             transaction = channel.getTransaction();
@@ -164,77 +163,8 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
                 Map<String, String> headers = event.getHeaders();
 
-                if (allowTopicOverride) {
-                    eventTopic = headers.get(topicHeader);
-                    if (eventTopic == null) {
-                        eventTopic = BucketPath.escapeString(topic, event.getHeaders());
-                        LOGGER.debug("{} was set to true but header {} was null. Producing to {}"
-                                + " topic instead.",
-                            new Object[]{KafkaSinkConstants.ALLOW_TOPIC_OVERRIDE_HEADER,
-                                topicHeader, eventTopic});
-                    }
-                } else {
-                    eventTopic = topic;
-                }
-
-                eventKey = headers.get(KEY_HEADER);
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("{Event} {} : {} ", eventTopic, eventKey);
-                }
                 LOGGER.debug("event #{}", processedEvents);
-
-                // create a message and add to buffer
-                long startTime = System.currentTimeMillis();
-
-                Integer partitionId = null;
-                Object dataRecord = null;
-                ProducerRecord<Object, Object> record;
-                try {
-                    if (useAvroEventFormat) {
-                        dataRecord = serializeAvroEvent(event, headers.get(SCHEMA_NAME));
-                    } else {
-                        dataRecord = serializeJsonEvent(event);
-                    }
-
-                    if (staticPartitionId != null) {
-                        partitionId = staticPartitionId;
-                    }
-                    //Allow a specified header to override a static ID
-                    if (partitionHeader != null) {
-                        String headerVal = event.getHeaders().get(partitionHeader);
-                        if (headerVal != null) {
-                            partitionId = Integer.parseInt(headerVal);
-                        }
-                    }
-                    if (partitionId != null) {
-                        record = new ProducerRecord<>(eventTopic, partitionId, eventKey,
-                            dataRecord);
-                    } else {
-                        record = new ProducerRecord<>(eventTopic, eventKey,
-                            dataRecord);
-                    }
-                    kafkaFutures
-                        .add(producer.send(record,
-                            new SinkCallback(startTime, dataRecord, headers,
-                                this.handleErrorData)));
-                } catch (NumberFormatException ex) {
-                    throw new EventDeliveryException("Non integer partition id specified", ex);
-                } catch (Exception ex) {
-                    // N.B. The producer.send() method throws all sorts of RuntimeExceptions
-                    // Catching Exception here to wrap them neatly in an EventDeliveryException
-                    // which is what our consumers will expect
-                    // 如果是avro 格式,对异常进行处理
-                    if (useAvroEventFormat) {
-                        LOGGER.error("Could not send event", ex);
-                        handleErrorData.accept(dataRecord, headers);
-                        if (dataRecord != null) {
-                            record = buildAlertInfoRecord(eventTopic, ex.getMessage(), dataRecord);
-                            kafkaFutures.add(producer.send(record));
-                        }
-                    } else {
-                        throw new EventDeliveryException("Could not send event", ex);
-                    }
-                }
+                eventSend(event, headers);
             }
 
             //Prevent linger.ms from holding the batch
@@ -264,6 +194,86 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
         return result;
     }
+
+    private void eventSend(Event event, Map<String, String> headers)
+        throws EventDeliveryException {
+        // create a message and add to buffer
+        long startTime = System.currentTimeMillis();
+
+        String eventTopic;
+
+        if (allowTopicOverride) {
+            eventTopic = headers.get(topicHeader);
+            if (eventTopic == null) {
+                eventTopic = BucketPath.escapeString(topic, event.getHeaders());
+                LOGGER.debug("{} was set to true but header {} was null. Producing to {}"
+                        + " topic instead.",
+                    new Object[]{KafkaSinkConstants.ALLOW_TOPIC_OVERRIDE_HEADER,
+                        topicHeader, eventTopic});
+            }
+        } else {
+            eventTopic = topic;
+        }
+
+        Object dataRecord = null;
+        ProducerRecord<Object, Object> record;
+        try {
+            if (useAvroEventFormat) {
+                dataRecord = serializeAvroEvent(event, headers.get(SCHEMA_NAME));
+            } else {
+                dataRecord = serializeJsonEvent(event);
+            }
+
+            record = getKafkaRecord(dataRecord, eventTopic, headers);
+
+            kafkaFutures
+                .add(producer.send(record,
+                    new SinkCallback(startTime, dataRecord, headers,
+                        this.handleErrorData)));
+        } catch (NumberFormatException ex) {
+            throw new EventDeliveryException("Non integer partition id specified", ex);
+        } catch (Exception ex) {
+            // N.B. The producer.send() method throws all sorts of RuntimeExceptions
+            // Catching Exception here to wrap them neatly in an EventDeliveryException
+            // which is what our consumers will expect
+            // 如果是avro 格式,对异常进行处理
+            if (useAvroEventFormat) {
+                LOGGER.error("Could not send event", ex);
+                handleErrorData.accept(dataRecord, headers);
+                if (dataRecord != null) {
+                    record = buildAlertInfoRecord(eventTopic, ex.getMessage(), dataRecord);
+                    kafkaFutures.add(producer.send(record));
+                }
+            } else {
+                throw new EventDeliveryException("Could not send event", ex);
+            }
+        }
+    }
+
+    private ProducerRecord<Object, Object> getKafkaRecord(Object dataRecord,
+        String eventTopic, Map<String, String> headers) {
+        Integer partitionId = null;
+        ProducerRecord<Object, Object> record;
+        String eventKey = headers.get(KEY_HEADER);
+
+        if (staticPartitionId != null) {
+            partitionId = staticPartitionId;
+        }
+        //Allow a specified header to override a static ID
+        if (partitionHeader != null) {
+            String headerVal = headers.get(partitionHeader);
+            if (headerVal != null) {
+                partitionId = Integer.parseInt(headerVal);
+            }
+        }
+        if (partitionId != null) {
+            record = new ProducerRecord<>(eventTopic, partitionId, eventKey, dataRecord);
+        } else {
+            record = new ProducerRecord<>(eventTopic, eventKey, dataRecord);
+        }
+        return record;
+    }
+
 
     private void handleException(Transaction transaction, Exception ex)
         throws EventDeliveryException {
@@ -393,9 +403,10 @@ public class KafkaSink extends AbstractSink implements Configurable {
     }
 
     private void translateOldProps(Context ctx) {
+        String warnInfo = "{} is deprecated. Please use the parameter {}";
         if (!(ctx.containsKey(TOPIC_CONFIG))) {
-            ctx.put(TOPIC_CONFIG, ctx.getString("topic"));
-            LOGGER.warn("{} is deprecated. Please use the parameter {}", "topic", TOPIC_CONFIG);
+            ctx.put(TOPIC_CONFIG, ctx.getString(STRING_TOPIC));
+            LOGGER.warn(warnInfo, STRING_TOPIC, TOPIC_CONFIG);
         }
 
         //Broker List
@@ -406,8 +417,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
                 throw new ConfigurationException("Bootstrap Servers must be specified");
             } else {
                 ctx.put(BOOTSTRAP_SERVERS_CONFIG, brokerList);
-                LOGGER.warn("{} is deprecated. Please use the parameter {}",
-                    BROKER_LIST_FLUME_KEY, BOOTSTRAP_SERVERS_CONFIG);
+                LOGGER.warn(warnInfo, BROKER_LIST_FLUME_KEY, BOOTSTRAP_SERVERS_CONFIG);
             }
         }
 
@@ -416,8 +426,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
             String oldBatchSize = ctx.getString(OLD_BATCH_SIZE);
             if (oldBatchSize != null && !oldBatchSize.isEmpty()) {
                 ctx.put(BATCH_SIZE, oldBatchSize);
-                LOGGER.warn("{} is deprecated. Please use the parameter {}", OLD_BATCH_SIZE,
-                    BATCH_SIZE);
+                LOGGER.warn(warnInfo, OLD_BATCH_SIZE, BATCH_SIZE);
             }
         }
 
@@ -428,11 +437,15 @@ public class KafkaSink extends AbstractSink implements Configurable {
             if ((requiredKey != null) && !(requiredKey.isEmpty())) {
                 ctx.put(KAFKA_PRODUCER_PREFIX + ProducerConfig.ACKS_CONFIG, requiredKey);
                 LOGGER
-                    .warn("{} is deprecated. Please use the parameter {}", REQUIRED_ACKS_FLUME_KEY,
+                    .warn(warnInfo, REQUIRED_ACKS_FLUME_KEY,
                         KAFKA_PRODUCER_PREFIX + ProducerConfig.ACKS_CONFIG);
             }
         }
 
+        serializerCtx(ctx);
+    }
+
+    private void serializerCtx(Context ctx) {
         if (ctx.containsKey(KEY_SERIALIZER_KEY)) {
             LOGGER.warn(
                 "{} is deprecated. Flume now uses the latest Kafka producer which implements "
@@ -478,7 +491,7 @@ public class KafkaSink extends AbstractSink implements Configurable {
         return kafkaProps;
     }
 
-    private GenericRecord serializeAvroEvent(Event event, String schemaName) throws IOException {
+    private GenericRecord serializeAvroEvent(Event event, String schemaName) {
         byte[] bytes = event.getBody();
         Schema schema = SchemaCache.getSchemaSink(schemaName);
 

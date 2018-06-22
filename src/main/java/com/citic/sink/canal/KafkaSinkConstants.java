@@ -4,19 +4,21 @@ import org.apache.kafka.clients.CommonClientConfigs;
 
 public class KafkaSinkConstants {
 
+    public static final String STRING_TOPIC = "topic";
+
     public static final String KAFKA_PREFIX = "kafka.";
     public static final String KAFKA_PRODUCER_PREFIX = KAFKA_PREFIX + "producer.";
 
     /* Properties */
 
-    public static final String TOPIC_CONFIG = KAFKA_PREFIX + "topic";
+    public static final String TOPIC_CONFIG = KAFKA_PREFIX + STRING_TOPIC;
     public static final String BATCH_SIZE = "flumeBatchSize";
     public static final String BOOTSTRAP_SERVERS_CONFIG =
         KAFKA_PREFIX + CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 
     public static final String KEY_HEADER = "key";
     public static final String SCHEMA_NAME = "schema";
-    public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = "topic";
+    public static final String DEFAULT_TOPIC_OVERRIDE_HEADER = STRING_TOPIC;
 
 
     public static final String FLOW_COUNTER_TOPIC = "flow_topic";
@@ -78,6 +80,7 @@ public class KafkaSinkConstants {
     public static final String ALERT_EVENT_DATA = "event_data";
     public static final String ALERT_SCHEMA_NAME = "alter_info";
     public static final String ALERT_TOPIC = "avro_error_alert";
+
 
     private KafkaSinkConstants() {
         throw new IllegalStateException("Utility class");
