@@ -2,6 +2,7 @@
 package com.citic.source.canal.resolve;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.citic.helper.MyRuntimeException;
 import com.citic.source.canal.AbstractEntrySqlHandler.Avro;
 import com.citic.source.canal.AbstractEntrySqlHandler.Json;
 import com.citic.source.canal.CanalConf;
@@ -56,7 +57,7 @@ public class EntryConverter implements EntryConverterInterface {
                 rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
             } catch (Exception e) {
                 LOGGER.warn("parse row data event has an error , data:" + entry.toString(), e);
-                throw new RuntimeException("parse event has an error , data:" + entry.toString(),
+                throw new MyRuntimeException("parse event has an error , data:" + entry.toString(),
                     e);
             }
             CanalEntry.EventType eventType = rowChange.getEventType();

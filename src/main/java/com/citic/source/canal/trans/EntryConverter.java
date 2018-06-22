@@ -17,6 +17,7 @@ import com.citic.helper.AgentCounter;
 import com.citic.helper.AgentCounter.AgentCounterKey;
 import com.citic.helper.FlowCounter;
 import com.citic.helper.FlowCounter.FlowCounterKey;
+import com.citic.helper.MyRuntimeException;
 import com.citic.helper.SchemaCache;
 import com.citic.helper.Utility;
 import com.citic.source.canal.AbstractEntrySqlHandler.Avro;
@@ -268,7 +269,7 @@ public class EntryConverter implements EntryConverterInterface {
         } catch (InvalidProtocolBufferException e) {
             LOGGER.error(
                 "parse transaction end event has an error , data:{}",  entry);
-            throw new RuntimeException(
+            throw new MyRuntimeException(
                 "parse event has an error , data:" + entry.toString(), e);
         }
 
@@ -291,7 +292,7 @@ public class EntryConverter implements EntryConverterInterface {
             rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
         } catch (Exception e) {
             LOGGER.warn("parse row data event has an error , data:" + entry.toString(), e);
-            throw new RuntimeException("parse event has an error , data:" + entry.toString(),
+            throw new MyRuntimeException("parse event has an error , data:" + entry.toString(),
                 e);
         }
         CanalEntry.EventType eventType = rowChange.getEventType();

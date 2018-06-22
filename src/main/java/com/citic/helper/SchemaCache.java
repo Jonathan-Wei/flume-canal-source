@@ -95,6 +95,6 @@ public class SchemaCache {
         List<String> tst = Lists.newArrayList("id", "name", "age");
 
         Schema test = getSchema2(tst, tst, "zhoupeng");
-        System.out.println(test);
+        test.toString();
     }
 }

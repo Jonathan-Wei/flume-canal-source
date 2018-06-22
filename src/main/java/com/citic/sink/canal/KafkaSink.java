@@ -182,8 +182,6 @@ public class KafkaSink extends AbstractSink implements Configurable {
 
             transaction.commit();
 
-        } catch (RuntimeException ex) {
-            handleException(transaction, ex);
         } catch (Exception ex) {
             handleException(transaction, ex);
         } finally {

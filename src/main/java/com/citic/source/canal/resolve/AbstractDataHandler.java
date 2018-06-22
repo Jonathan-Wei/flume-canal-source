@@ -54,6 +54,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractDataHandler.class);
     private final SimpleDateFormat dateFormat = new SimpleDateFormat(SUPPORT_TIME_FORMAT);
+    static final String EVENT_DATA_FORMAT = "event data: {}";
 
     private final CanalConf canalConf;
     private final List<String> attrList;
@@ -347,7 +348,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
 
             // 用于sink解析
             eventHeader.put(SCHEMA_NAME, schemaName);
-            LOGGER.debug("event data: {}", avroRecord);
+            LOGGER.debug(EVENT_DATA_FORMAT, avroRecord);
             LOGGER.debug("event header: {}", eventHeader);
 
             Injection<GenericRecord, byte[]> recordInjection = GenericAvroCodecs.toBinary(schema);
@@ -388,10 +389,10 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
                 eventBody = GSON.toJson(filterTableData, TOKEN_TYPE)
                     .getBytes(Charset.forName("UTF-8"));
 
-                LOGGER.debug("event data: {}", filterTableData);
+                LOGGER.debug(EVENT_DATA_FORMAT, filterTableData);
             } else {
                 eventBody = GSON.toJson(eventData, TOKEN_TYPE).getBytes(Charset.forName("UTF-8"));
-                LOGGER.debug("event data: {}", eventData);
+                LOGGER.debug(EVENT_DATA_FORMAT, eventData);
             }
 
             LOGGER.debug("event header: {}", eventHeader);
