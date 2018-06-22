@@ -21,7 +21,7 @@ public class RegexHashBasedTable<C, V> extends StandardTable<String, C, V> {
         /**
          * The Expected size.
          */
-        final int expectedSize;
+        private final int expectedSize;
 
         /**
          * Instantiates a new Factory.

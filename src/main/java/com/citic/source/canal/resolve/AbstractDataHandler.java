@@ -327,7 +327,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
             String topic) {
 
             Set<String> schemaFieldList = topicToSchemaFields.get(topic);
-            if (schemaFieldList == null || schemaFieldList.size() == 0) {
+            if (schemaFieldList == null || schemaFieldList.isEmpty()) {
                 return null;
             }
 
@@ -377,15 +377,14 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
             List<String> tableFields = topicToTableFields.get(topic);
             byte[] eventBody;
 
-            if (tableFields != null && tableFields.size() > 0) {
+            if (tableFields != null && !tableFields.isEmpty()) {
                 Map<String, String> filterTableData = Maps.newHashMap();
 
                 // schemaFieldList and ATTR_LIST are same List<String> type
                 @SuppressWarnings("unchecked")
                 List<String> unionList = ListUtils.union(tableFields, super.attrList);
-                unionList.forEach(fieldName -> {
-                    filterTableData.put((String) fieldName, eventData.getOrDefault(fieldName, ""));
-                });
+                unionList.forEach(fieldName -> filterTableData
+                    .put((String) fieldName, eventData.getOrDefault(fieldName, "")));
                 eventBody = GSON.toJson(filterTableData, TOKEN_TYPE)
                     .getBytes(Charset.forName("UTF-8"));
 
@@ -449,7 +448,7 @@ abstract class AbstractDataHandler extends AbstractCommonDataHandler implements
         @Override
         String getTimeFieldName(String topic) {
             List<String> tableFields = topicToTableFields.get(topic);
-            if (tableFields == null || tableFields.size() == 0) {
+            if (tableFields == null || tableFields.isEmpty()) {
                 return null;
             } else {
                 // 默认首个字段为时间字段
