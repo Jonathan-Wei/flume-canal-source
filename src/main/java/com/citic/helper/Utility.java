@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 public class Utility {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Utility.class);
-    private static final String DEFAULT_IP = "127.0.0.1";
 
     private Utility() {
         throw new IllegalStateException("Utility class");
@@ -54,7 +53,7 @@ public class Utility {
      * @return the local ip
      */
     public static String getLocalIp(String interfaceName) {
-        String ip = DEFAULT_IP;
+        String ip = "can't get ip use " + interfaceName;
         Enumeration<?> e1;
         try {
             e1 = NetworkInterface.getNetworkInterfaces();
