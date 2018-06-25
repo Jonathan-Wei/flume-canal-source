@@ -23,6 +23,7 @@ import com.alibaba.otter.canal.protocol.Message;
 import com.google.common.base.Joiner;
 import java.net.SocketAddress;
 import java.util.List;
+import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,18 +44,20 @@ public class CanalClient {
      * @param canalConf the canal conf
      * @throws IllegalArgumentException the illegal argument exception
      */
-    public CanalClient(CanalConf canalConf) {
+    public CanalClient(CanalConf canalConf) throws InterruptedException {
         this.canalConf = canalConf;
         if (StringUtils.isNotEmpty(canalConf.getZkServers())) {
             this.canalConnector = getConnector(canalConf.getZkServers(), canalConf.getDestination(),
                 canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace("Cluster connector has been created. Zookeeper servers are {}, destination is {}",
+            LOGGER.trace(
+                "Cluster connector has been created. Zookeeper servers are {}, destination is {}",
                 canalConf.getZkServers(), canalConf.getDestination());
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrls())) {
             this.canalConnector = getConnector(
                 CanalConf.convertUrlsToSocketAddressList(canalConf.getServerUrls()),
                 canalConf.getDestination(), canalConf.getUsername(), canalConf.getPassword());
-            LOGGER.trace("Cluster connector has been created. Server urls are {}, destination is {}",
+            LOGGER
+                .trace("Cluster connector has been created. Server urls are {}, destination is {}",
                     canalConf.getServerUrls(), canalConf.getDestination());
         } else if (StringUtils.isNotEmpty(canalConf.getServerUrl())) {
             this.canalConnector = getConnector(
@@ -117,9 +120,28 @@ public class CanalClient {
     }
 
     private CanalConnector getConnector(String zkServers, String destination, String username,
-        String password) {
-        return CanalConnectors.newClusterConnector(zkServers, destination, username, password);
+        String password) throws InterruptedException {
+        return getZkConnector(zkServers, destination, username, password, 1000, 3);
     }
+
+    private CanalConnector getZkConnector(String zkServers, String destination, String username,
+        String password, int sleepMillis, int retryCount) throws InterruptedException {
+        try {
+            return CanalConnectors.newClusterConnector(zkServers, destination, username, password);
+        } catch (ZkNoNodeException ex) {
+            LOGGER.warn(ex.getLocalizedMessage(), ex);
+            if (retryCount > 0) {
+                Thread.sleep(sleepMillis);
+                // 如果 canal 和 flume 同时启动，可能出现 canal 还没有在zookeeper注册注册成功的情况
+                return getZkConnector(zkServers, destination, username, password,
+                    sleepMillis + 1000,
+                    retryCount - 1);
+            } else {
+                throw ex;
+            }
+        }
+    }
+
 
     private CanalConnector getConnector(List<? extends SocketAddress> addresses, String destination,
         String username, String password) {

@@ -106,8 +106,10 @@ public abstract class AbstractCanalSource extends AbstractPollableSource
             this.canalClient.start();
         } catch (IllegalArgumentException exception) {
             LOGGER.error(exception.getMessage(), exception);
-
             throw new FlumeException(exception);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new FlumeException(e);
         }
 
         sourceCounter.start();
