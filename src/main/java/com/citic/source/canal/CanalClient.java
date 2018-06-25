@@ -129,7 +129,7 @@ public class CanalClient {
         try {
             return CanalConnectors.newClusterConnector(zkServers, destination, username, password);
         } catch (ZkNoNodeException ex) {
-            LOGGER.warn(ex.getLocalizedMessage(), ex);
+            LOGGER.warn(ex.getLocalizedMessage());
             if (retryCount > 0) {
                 Thread.sleep(sleepMillis);
                 // 如果 canal 和 flume 同时启动，可能出现 canal 还没有在zookeeper注册注册成功的情况
