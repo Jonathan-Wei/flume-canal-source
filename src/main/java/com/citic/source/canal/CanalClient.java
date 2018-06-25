@@ -121,7 +121,7 @@ public class CanalClient {
 
     private CanalConnector getConnector(String zkServers, String destination, String username,
         String password) throws InterruptedException {
-        return getZkConnector(zkServers, destination, username, password, 1000, 3);
+        return getZkConnector(zkServers, destination, username, password, 1000, 5);
     }
 
     private CanalConnector getZkConnector(String zkServers, String destination, String username,
