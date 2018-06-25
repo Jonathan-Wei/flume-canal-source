@@ -119,11 +119,6 @@ public class CanalClient {
         this.canalConnector.disconnect();
     }
 
-    private CanalConnector getConnector(String zkServers, String destination, String username,
-        String password) throws InterruptedException {
-        return getZkConnector(zkServers, destination, username, password, 1000, 5);
-    }
-
     private CanalConnector getZkConnector(String zkServers, String destination, String username,
         String password, int sleepMillis, int retryCount) throws InterruptedException {
         try {
@@ -142,6 +137,10 @@ public class CanalClient {
         }
     }
 
+    private CanalConnector getConnector(String zkServers, String destination, String username,
+        String password) throws InterruptedException {
+        return getZkConnector(zkServers, destination, username, password, 1000, 5);
+    }
 
     private CanalConnector getConnector(List<? extends SocketAddress> addresses, String destination,
         String username, String password) {
