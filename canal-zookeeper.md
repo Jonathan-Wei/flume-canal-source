@@ -73,7 +73,7 @@ dataLength = 10
 numChildren = 0
 ```
 * Instance 下消费端client 对当前MySQL实例消费位点信息的记录  
-如果希望重新消费可以删除这个zookeeper路径
+如果希望重新消费可以删除这个zookeeper路径  
 这里记录了MySQL的连接信息和当前消费的binlog名称和位置信息
 ```
 get /otter/canal/destinations/192_168_2_26-3306/1001/cursor
